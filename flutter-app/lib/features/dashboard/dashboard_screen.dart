@@ -1,0 +1,143 @@
+import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/glass_card.dart';
+import 'widgets/market_overview_card.dart';
+import 'widgets/fear_greed_widget.dart';
+import 'widgets/funding_rate_panel.dart';
+import 'widgets/whale_alerts.dart';
+import 'widgets/ai_summary_card.dart';
+import 'widgets/portfolio_overview.dart';
+import 'widgets/trending_coins.dart';
+
+class DashboardScreen extends StatelessWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(20),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // Header
+                _DashboardHeader(),
+                const SizedBox(height: 20),
+
+                // Market overview cards
+                const SectionHeader(
+                  title: 'Market Overview',
+                  subtitle: 'Live prices · Updated every 5s',
+                ),
+                const SizedBox(height: 12),
+                const MarketOverviewCards(),
+                const SizedBox(height: 20),
+
+                // AI Summary + Fear & Greed
+                const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: AiSummaryCard()),
+                    SizedBox(width: 16),
+                    Expanded(flex: 2, child: FearGreedWidget()),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Funding + Portfolio
+                const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: FundingRatePanel()),
+                    SizedBox(width: 16),
+                    Expanded(child: PortfolioOverview()),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Trending + Whale Alerts
+                const SectionHeader(title: 'Trending & Whale Activity'),
+                const SizedBox(height: 12),
+                const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: TrendingCoins()),
+                    SizedBox(width: 16),
+                    Expanded(child: WhaleAlerts()),
+                  ],
+                ),
+                const SizedBox(height: 40),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Dashboard',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              Text(
+                'Market at a glance — live data',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withOpacity(0.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+        _QuickAction(icon: Icons.refresh_rounded, label: 'Refresh'),
+        const SizedBox(width: 8),
+        _QuickAction(icon: Icons.tune_rounded, label: 'Customize'),
+      ],
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _QuickAction({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.textMuted),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMuted,
+          )),
+        ],
+      ),
+    );
+  }
+}

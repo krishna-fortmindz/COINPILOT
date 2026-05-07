@@ -1,0 +1,16 @@
+{
+  "name": "ai-trading-copilot",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"next,flutter,proxy\" --prefix-colors \"cyan,magenta,yellow\" \"npm:dev:next\" \"npm:dev:flutter\" \"npm:dev:proxy\"",
+    "dev:next": "cd nextjs-app && npm run dev",
+    "dev:flutter": "cd flutter-app && flutter run --profile -d web-server --web-port 5001 --web-hostname localhost",
+    "dev:proxy": "node dev-proxy.js",
+    "install:all": "cd nextjs-app && npm install"
+  },
+  "dependencies": {
+    "http-proxy": "^1.18.1",
+    "concurrently": "^8.2.2"
+  }
+}

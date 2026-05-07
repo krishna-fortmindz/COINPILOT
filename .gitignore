@@ -1,0 +1,40 @@
+# ── Environment variables ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# ── Next.js ──────────────────────────────────────────────────────────────────
+nextjs-app/.next/
+nextjs-app/out/
+nextjs-app/node_modules/
+nextjs-app/.cache/
+
+# ── Flutter ───────────────────────────────────────────────────────────────────
+flutter-app/build/
+flutter-app/.dart_tool/
+flutter-app/.flutter-plugins
+flutter-app/.flutter-plugins-dependencies
+flutter-app/.packages
+flutter-app/pubspec.lock
+
+# ── Root node_modules (dev proxy / concurrently) ─────────────────────────────
+node_modules/
+package-lock.json
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.iml
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+ssl/
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
