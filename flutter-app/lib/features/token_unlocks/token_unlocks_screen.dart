@@ -84,12 +84,36 @@ const _unlocks = [
   ),
 ];
 
-class TokenUnlocksScreen extends StatelessWidget {
+class TokenUnlocksScreen extends StatefulWidget {
   const TokenUnlocksScreen({super.key});
 
   @override
+  State<TokenUnlocksScreen> createState() => _TokenUnlocksScreenState();
+}
+
+class _TokenUnlocksScreenState extends State<TokenUnlocksScreen> {
+  String _query = '';
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<_Unlock> get _filtered {
+    if (_query.isEmpty) return _unlocks;
+    final q = _query.toLowerCase();
+    return _unlocks.where((u) =>
+      u.symbol.toLowerCase().contains(q) ||
+      u.name.toLowerCase().contains(q) ||
+      u.category.toLowerCase().contains(q)
+    ).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final totalValue = '\$469.0M';
+    final filtered = _filtered;
     final highRisk = _unlocks.where((u) => u.riskLevel == 'HIGH' || u.riskLevel == 'EXTREME').length;
 
     return Scaffold(
@@ -102,15 +126,24 @@ class TokenUnlocksScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(totalValue, highRisk),
+                  _buildHeader('\$469.0M', highRisk),
+                  const SizedBox(height: 16),
+                  _buildSearchBar(),
+                  if (_query.isEmpty) ...[
+                    const SizedBox(height: 20),
+                    _buildSummaryRow(),
+                    const SizedBox(height: 20),
+                    _buildTimeline(),
+                  ],
                   const SizedBox(height: 20),
-                  _buildSummaryRow(),
-                  const SizedBox(height: 20),
-                  _buildTimeline(),
-                  const SizedBox(height: 20),
-                  const Text('Upcoming Unlocks', style: TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white,
-                  )),
+                  Text(
+                    _query.isEmpty
+                      ? 'Upcoming Unlocks'
+                      : '${filtered.length} result${filtered.length == 1 ? '' : 's'} for "$_query"',
+                    style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                 ],
               ),
@@ -118,16 +151,69 @@ class TokenUnlocksScreen extends StatelessWidget {
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (_, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _UnlockCard(unlock: _unlocks[i]),
+            sliver: filtered.isEmpty
+              ? SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Text('No unlocks found for "$_query"',
+                        style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                    ),
+                  ),
+                )
+              : SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _UnlockCard(unlock: filtered[i]),
+                    ),
+                    childCount: filtered.length,
+                  ),
                 ),
-                childCount: _unlocks.length,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14),
+            child: Icon(Icons.search_rounded, size: 18, color: AppColors.textMuted),
+          ),
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              style: const TextStyle(fontSize: 14, color: Colors.white),
+              onChanged: (v) => setState(() => _query = v),
+              decoration: const InputDecoration(
+                hintText: 'Search by coin, name or category...',
+                hintStyle: TextStyle(color: AppColors.textDisabled, fontSize: 14),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
               ),
             ),
           ),
+          if (_query.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchCtrl.clear();
+                setState(() => _query = '');
+              },
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14),
+                child: Icon(Icons.close_rounded, size: 16, color: AppColors.textMuted),
+              ),
+            ),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
+import '../../core/widgets/coin_selector.dart';
 
 class _OrderLevel {
   final double price;
@@ -45,7 +46,6 @@ class OrderbookScreen extends StatefulWidget {
 
 class _OrderbookScreenState extends State<OrderbookScreen> {
   String _selectedCoin = 'BTC';
-  final _coins = ['BTC', 'ETH', 'SOL', 'BNB'];
 
   @override
   Widget build(BuildContext context) {
@@ -119,33 +119,9 @@ class _OrderbookScreenState extends State<OrderbookScreen> {
   }
 
   Widget _buildCoinSelector() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _coins.map((coin) => GestureDetector(
-          onTap: () => setState(() => _selectedCoin = coin),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: _selectedCoin == coin
-                  ? AppColors.brandGreen.withAlpha(20)
-                  : AppColors.bgCard,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _selectedCoin == coin
-                    ? AppColors.brandGreen.withAlpha(60)
-                    : AppColors.borderSubtle,
-              ),
-            ),
-            child: Text(coin, style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600,
-              color: _selectedCoin == coin ? AppColors.brandGreen : AppColors.textMuted,
-            )),
-          ),
-        )).toList(),
-      ),
+    return CoinSelector(
+      selected: _selectedCoin,
+      onChanged: (c) => setState(() => _selectedCoin = c),
     );
   }
 

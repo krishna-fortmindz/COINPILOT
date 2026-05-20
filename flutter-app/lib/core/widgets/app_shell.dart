@@ -46,8 +46,8 @@ class _BottomNav extends StatelessWidget {
 
   static const _moreRoutes = {
     '/analysis', '/memory', '/sentiment', '/listings',
-    '/orderbook', '/onchain', '/token-unlocks', '/portfolio',
-    '/risk', '/journal', '/chat', '/alerts',
+    '/onchain', '/token-unlocks', '/portfolio',
+    '/risk', '/journal', '/chat', '/alerts', '/profile',
   };
 
   bool get _moreActive => _moreRoutes.contains(currentRoute);
@@ -58,6 +58,7 @@ class _BottomNav extends StatelessWidget {
       _NavItem('/dashboard', Icons.dashboard_rounded, 'Home'),
       _NavItem('/trade-now', Icons.bolt_rounded, 'Signal'),
       _NavItem('/charts', Icons.candlestick_chart_rounded, 'Charts'),
+      _NavItem('/orderbook', Icons.menu_book_rounded, 'Book'),
     ];
 
     return Container(
@@ -89,18 +90,6 @@ class _BottomNav extends StatelessWidget {
                   icon: Icons.grid_view_rounded,
                   label: 'More',
                   active: _moreActive,
-                ),
-              ),
-            ),
-            // Profile
-            Expanded(
-              child: GestureDetector(
-                onTap: () => context.go('/profile'),
-                behavior: HitTestBehavior.opaque,
-                child: _NavTab(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  active: currentRoute == '/profile',
                 ),
               ),
             ),
@@ -176,6 +165,9 @@ class _MoreSheet extends StatelessWidget {
       _MoreEntry('/risk', Icons.shield_rounded, 'Risk Manager', AppColors.brandRed),
       _MoreEntry('/journal', Icons.book_rounded, 'Trade Journal', AppColors.brandBlue),
       _MoreEntry('/alerts', Icons.notifications_rounded, 'Alerts', AppColors.brandAmber),
+    ]),
+    _MoreSection('ACCOUNT', [
+      _MoreEntry('/profile', Icons.person_rounded, 'Profile', AppColors.textMuted),
     ]),
   ];
 

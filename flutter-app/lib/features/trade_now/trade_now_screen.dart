@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
-
-const _coins = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE'];
+import '../../core/widgets/coin_selector.dart';
 
 class _Signal {
   final String coin;
@@ -158,7 +157,7 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final signal = _signals[_selectedCoin]!;
+    final signal = _signals[_selectedCoin];
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -172,9 +171,13 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 16),
-                  _buildCoinSelector(),
+                  CoinSelector(
+                    selected: _selectedCoin,
+                    onChanged: (c) => setState(() => _selectedCoin = c),
+                  ),
                   const SizedBox(height: 20),
-                  _buildVerdictCard(signal),
+                  if (signal == null) _buildNoSignalCard() else _buildVerdictCard(signal),
+                  if (signal != null) ...[
                   const SizedBox(height: 16),
                   LayoutBuilder(builder: (_, c) {
                     if (c.maxWidth < 700) {
@@ -197,6 +200,7 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
                   _buildReasoningCard(signal),
                   const SizedBox(height: 16),
                   _buildHistoricalSetups(),
+                  ],
                   const SizedBox(height: 40),
                 ],
               ),
@@ -237,33 +241,32 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
     );
   }
 
-  Widget _buildCoinSelector() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+  Widget _buildNoSignalCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
       child: Row(
-        children: _coins.map((coin) => GestureDetector(
-          onTap: () => setState(() => _selectedCoin = coin),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: _selectedCoin == coin
-                  ? AppColors.brandGreen.withAlpha(20)
-                  : AppColors.bgCard,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _selectedCoin == coin
-                    ? AppColors.brandGreen.withAlpha(60)
-                    : AppColors.borderSubtle,
-              ),
+        children: [
+          const Icon(Icons.hourglass_top_rounded, size: 28, color: AppColors.textMuted),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$_selectedCoin signal coming soon', style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white,
+                )),
+                const SizedBox(height: 4),
+                const Text('Live AI analysis for this coin is not yet available.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+              ],
             ),
-            child: Text(coin, style: TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w700,
-              color: _selectedCoin == coin ? AppColors.brandGreen : AppColors.textMuted,
-            )),
           ),
-        )).toList(),
+        ],
       ),
     );
   }
