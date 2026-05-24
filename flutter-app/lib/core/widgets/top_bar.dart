@@ -5,8 +5,6 @@ import 'dart:async';
 import '../theme/app_colors.dart';
 import '../../providers/dashboard_provider.dart';
 import '../remote/web_socket_baseclass.dart';
-import '../../providers/charts_provider.dart';
-import '../../providers/ai_analysis_provider.dart';
 
 class TopBar extends StatelessWidget {
   const TopBar({super.key});
@@ -105,10 +103,10 @@ class _LiveIndicatorState extends ConsumerState<_LiveIndicator>
             height: 7,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: indicatorColor.withOpacity(0.4 + 0.6 * _controller.value),
+              color: indicatorColor.withValues(alpha: 0.4 + 0.6 * _controller.value),
               boxShadow: [
                 BoxShadow(
-                  color: indicatorColor.withOpacity(0.3 * _controller.value),
+                  color: indicatorColor.withValues(alpha: 0.3 * _controller.value),
                   blurRadius: 6,
                   spreadRadius: 2,
                 ),
@@ -265,7 +263,7 @@ class _SearchButton extends StatelessWidget {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'search',
-      barrierColor: Colors.black.withOpacity(0.7),
+      barrierColor: Colors.black.withValues(alpha: 0.7),
       transitionDuration: const Duration(milliseconds: 180),
       transitionBuilder: (_, anim, __, child) => FadeTransition(
         opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
@@ -291,18 +289,11 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
   final _controller = TextEditingController();
   String _query = '';
 
-  static const _coins = [
-    _SearchItem('BTC', 'Bitcoin · \$97,420', '/analysis', Icons.currency_bitcoin_rounded, Color(0xFFF7931A)),
-    _SearchItem('ETH', 'Ethereum · \$3,842', '/analysis', Icons.water_drop_rounded, Color(0xFF627EEA)),
-    _SearchItem('SOL', 'Solana · \$184', '/analysis', Icons.flash_on_rounded, Color(0xFF9945FF)),
-    _SearchItem('BNB', 'BNB · \$612', '/analysis', Icons.circle_rounded, Color(0xFFF3BA2F)),
-    _SearchItem('XRP', 'Ripple · \$2.14', '/analysis', Icons.waves_rounded, Color(0xFF0085C3)),
-    _SearchItem('DOGE', 'Dogecoin · \$0.182', '/analysis', Icons.pets_rounded, Color(0xFFC2A633)),
-  ];
+  static const _featuredSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE'];
 
   static const _screens = [
     _SearchItem('Dashboard', 'Market overview & live data', '/dashboard', Icons.dashboard_rounded, AppColors.brandGreen),
-    _SearchItem('Trade Now?', 'AI trading signal aggregator', '/trade-now', Icons.bolt_rounded, AppColors.brandGreen),
+    _SearchItem('Trade Now', 'AI trading signal aggregator', '/trade-now', Icons.bolt_rounded, AppColors.brandGreen),
     _SearchItem('AI Analysis', 'Deep AI coin analysis', '/analysis', Icons.psychology_rounded, AppColors.brandPurple),
     _SearchItem('Charts', 'Candlestick & technical analysis', '/charts', Icons.candlestick_chart_rounded, AppColors.brandBlue),
     _SearchItem('Sentiment', 'News & social sentiment', '/sentiment', Icons.sentiment_satisfied_rounded, AppColors.brandAmber),
@@ -313,19 +304,21 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
     _SearchItem('Portfolio', 'Holdings & P&L tracker', '/portfolio', Icons.pie_chart_rounded, AppColors.brandPurple),
     _SearchItem('Risk Manager', 'Position sizing & risk tools', '/risk', Icons.shield_rounded, AppColors.brandRed),
     _SearchItem('Trade Journal', 'Log & review your trades', '/journal', Icons.book_rounded, AppColors.brandBlue),
-    _SearchItem('Alerts', 'Price & signal alerts', '/alerts', Icons.notifications_rounded, AppColors.brandAmber),
     _SearchItem('AI Chat', 'Chat with AI copilot', '/chat', Icons.chat_bubble_outline_rounded, AppColors.brandGreen),
     _SearchItem('Profile', 'Settings & account', '/profile', Icons.person_rounded, AppColors.textMuted),
   ];
 
-  List<_SearchItem> get _filtered {
-    if (_query.isEmpty) return [..._coins.take(4), ..._screens.take(4)];
+  List<_SearchItem> get _filteredScreens {
+    if (_query.isEmpty) return _screens.take(4).toList();
     final q = _query.toLowerCase();
-    final coins = _coins.where((i) =>
-      i.title.toLowerCase().contains(q) || i.subtitle.toLowerCase().contains(q)).toList();
-    final screens = _screens.where((i) =>
-      i.title.toLowerCase().contains(q) || i.subtitle.toLowerCase().contains(q)).toList();
-    return [...coins, ...screens];
+    return _screens
+        .where((s) => s.title.toLowerCase().contains(q) || s.subtitle.toLowerCase().contains(q))
+        .toList();
+  }
+
+  void _goToCoin(String symbol) {
+    Navigator.of(context).pop();
+    context.go('/trade-now?coin=$symbol');
   }
 
   @override
@@ -336,6 +329,9 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final tickers = ref.watch(tickerProvider).value ?? const {};
+    final filteredScreens = _filteredScreens;
+
     return Align(
       alignment: Alignment.topCenter,
       child: Padding(
@@ -346,14 +342,14 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
         child: Material(
           color: Colors.transparent,
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 500),
+            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 520),
             decoration: BoxDecoration(
               color: AppColors.bgSecondary,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.borderSubtle),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withValues(alpha: 0.4),
                   blurRadius: 40,
                   offset: const Offset(0, 20),
                 ),
@@ -362,6 +358,7 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // ── Search input ──
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -375,7 +372,7 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
                           style: const TextStyle(fontSize: 15, color: Colors.white),
                           onChanged: (v) => setState(() => _query = v),
                           decoration: const InputDecoration(
-                            hintText: 'Search coins or navigate screens...',
+                            hintText: 'Search any coin or navigate...',
                             hintStyle: TextStyle(color: AppColors.textDisabled, fontSize: 15),
                             border: InputBorder.none,
                             isDense: true,
@@ -400,59 +397,53 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
                   ),
                 ),
                 const Divider(color: AppColors.borderSubtle, height: 1),
-                if (_query.isEmpty) ...[
-                  _SectionHeader('Coins'),
-                ],
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    itemCount: _filtered.length,
-                    itemBuilder: (_, i) {
-                      final item = _filtered[i];
-                      final isFirstScreen = _query.isEmpty && i == 4;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (isFirstScreen) _SectionHeader('Screens'),
-                          _SearchResultRow(
-                            item: item,
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              final isCoin = item.route == '/analysis';
-                              if (isCoin) {
-                                final coinSymbol = item.title;
-                                ref.read(aiAnalysisProvider).selectCoin(coinSymbol);
-                                ref.read(chartsProvider).setCoin(coinSymbol);
 
-                                final currentRoute = GoRouterState.of(context).uri.path;
-                                if (currentRoute == '/charts' ||
-                                    currentRoute == '/analysis' ||
-                                    currentRoute == '/trade-now' ||
-                                    currentRoute == '/orderbook' ||
-                                    currentRoute == '/onchain') {
-                                  // Stay on current screen, coin selection has already updated!
-                                } else {
-                                  context.go(item.route);
-                                }
-                              } else {
-                                context.go(item.route);
-                              }
-                            },
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(bottom: 8),
+                    children: [
+                      // ── Coins ──
+                      const _SectionHeader('COINS'),
+                      if (_query.length >= 2)
+                        _ApiCoinSection(query: _query, onTap: _goToCoin)
+                      else
+                        ..._featuredSymbols.map((sym) {
+                          final ticker = tickers['${sym}USDT'];
+                          final priceStr = ticker != null
+                              ? '\$${ticker.close.toStringAsFixed(ticker.close < 10 ? 3 : 2)}'
+                              : '—';
+                          return _CoinResultRow(
+                            symbol: sym,
+                            subtitle: priceStr,
+                            onTap: () => _goToCoin(sym),
+                          );
+                        }),
+
+                      // ── Screens ──
+                      if (filteredScreens.isNotEmpty) ...[
+                        const _SectionHeader('SCREENS'),
+                        ...filteredScreens.map((item) => _SearchResultRow(
+                          item: item,
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            context.go(item.route);
+                          },
+                        )),
+                      ],
+
+                      if (_query.isNotEmpty && filteredScreens.isEmpty && _query.length < 2)
+                        const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(
+                            child: Text('No results', style: TextStyle(
+                              fontSize: 14, color: AppColors.textMuted)),
                           ),
-                        ],
-                      );
-                    },
+                        ),
+                    ],
                   ),
                 ),
-                if (_filtered.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('No results found', style: TextStyle(
-                      fontSize: 14, color: AppColors.textMuted,
-                    )),
-                  ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
               ],
             ),
           ),
@@ -501,7 +492,7 @@ class _SearchResultRow extends StatelessWidget {
             Container(
               width: 32, height: 32,
               decoration: BoxDecoration(
-                color: item.color.withOpacity(0.12),
+                color: item.color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(item.icon, size: 16, color: item.color),
@@ -607,26 +598,117 @@ class _SearchResultSubtitleState extends ConsumerState<_SearchResultSubtitle> {
   }
 }
 
+// ── API coin search section ────────────────────────────────────────────────────
+
+class _ApiCoinSection extends ConsumerWidget {
+  final String query;
+  final void Function(String symbol) onTap;
+  const _ApiCoinSection({required this.query, required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(coinSearchProvider(query));
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(
+          child: SizedBox(
+            width: 18, height: 18,
+            child: CircularProgressIndicator(color: AppColors.brandGreen, strokeWidth: 2),
+          ),
+        ),
+      ),
+      error: (_, __) => const Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Text('Could not load coins', style: TextStyle(fontSize: 12, color: AppColors.brandRed)),
+      ),
+      data: (coins) {
+        if (coins.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Text('No coins found', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          );
+        }
+        return Column(
+          children: coins.take(8).map((coin) => _CoinResultRow(
+            symbol: coin.symbol,
+            subtitle: '${coin.name}  ${coin.formattedChange}',
+            changePositive: coin.positive,
+            onTap: () => onTap(coin.symbol),
+          )).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _CoinResultRow extends StatelessWidget {
+  final String symbol;
+  final String subtitle;
+  final bool? changePositive;
+  final VoidCallback onTap;
+
+  const _CoinResultRow({
+    required this.symbol,
+    required this.subtitle,
+    this.changePositive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitleColor = changePositive == null
+        ? AppColors.textMuted
+        : changePositive!
+            ? AppColors.brandGreen
+            : AppColors.brandRed;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        color: Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  symbol.isNotEmpty ? symbol[0] : '?',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(symbol, style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                  Text(subtitle, style: TextStyle(fontSize: 11, color: subtitleColor)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.textDisabled),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Notification button ───────────────────────────────────────────────────────
+
 class _NotificationButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        _TopBarButton(
-          icon: Icons.notifications_outlined,
-          onTap: () => context.go('/alerts'),
-        ),
-        Positioned(
-          top: 2, right: 2,
-          child: Container(
-            width: 7, height: 7,
-            decoration: const BoxDecoration(
-              color: AppColors.brandRed,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ],
+    return _TopBarButton(
+      icon: Icons.notifications_outlined,
+      onTap: () {},
     );
   }
 }

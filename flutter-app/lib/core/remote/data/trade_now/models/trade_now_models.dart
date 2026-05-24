@@ -34,6 +34,8 @@ class SignalData {
   final String stopLoss;
   final String riskReward;
   final String reasoning;
+  final bool futuresAvailable;
+  final bool coinNotSupported;
 
   const SignalData({
     required this.price,
@@ -45,6 +47,8 @@ class SignalData {
     required this.stopLoss,
     required this.riskReward,
     required this.reasoning,
+    this.futuresAvailable = true,
+    this.coinNotSupported = false,
   });
 
   String get verdictIcon {
@@ -83,7 +87,7 @@ class SignalData {
     final entryMax = (entryZone['max'] as num?)?.toDouble();
     final String entryStr;
     if (entryMin != null && entryMax != null) {
-      entryStr = '\$${entryMin.toStringAsFixed(0)}–\$${entryMax.toStringAsFixed(0)}';
+      entryStr = '${_formatPrice(entryMin)}–${_formatPrice(entryMax)}';
     } else {
       entryStr = json['entry']?.toString() ?? '—';
     }
@@ -104,6 +108,10 @@ class SignalData {
       stopLoss: _formatPrice(levels['stopLoss'] ?? json['stopLoss']),
       riskReward: levels['riskReward']?.toString() ?? json['riskReward']?.toString() ?? '—',
       reasoning: reasoningStr,
+      futuresAvailable: json['futuresAvailable'] as bool? ??
+          json['futures_available'] as bool? ?? true,
+      coinNotSupported: json['coin_not_supported'] as bool? ??
+          json['coinNotSupported'] as bool? ?? false,
     );
   }
 
@@ -114,7 +122,9 @@ class SignalData {
     if (d >= 1000) {
       return '\$${d.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
     }
-    return '\$${d.toStringAsFixed(2)}';
+    if (d >= 1) return '\$${d.toStringAsFixed(2)}';
+    if (d >= 0.001) return '\$${d.toStringAsFixed(4)}';
+    return '\$${d.toStringAsFixed(6)}';
   }
 
   static SignalData get empty => const SignalData(

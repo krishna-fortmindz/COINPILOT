@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/remote/chat_socket.dart';
-import '../services/shared_pref_services.dart';
-import '../services/pref_keys.dart';
+import 'auth_provider.dart';
 
 // ── Message model ─────────────────────────────────────────────────────────────
 
@@ -92,8 +94,20 @@ class AiChatNotifier extends Notifier<AiChatState> {
   StreamSubscription<String>? _errorSub;
   StreamSubscription<List<ChatHistoryMessage>>? _historySub;
 
-  String get _userId =>
-      SharedPreferenceService.getValue<String>(PrefKeys.userId) ?? 'guest';
+  // For logged-in users: use real user ID stored by Next.js after login.
+  // For guests: use 'guest' so the backend treats this as an anonymous session
+  // (no history is loaded for guests — each browser session starts fresh).
+  String get _userId {
+    final userJson = html.window.localStorage['coinastra_user'];
+    if (userJson != null) {
+      try {
+        final map = jsonDecode(userJson) as Map<String, dynamic>;
+        final id = map['id']?.toString() ?? map['_id']?.toString() ?? '';
+        if (id.isNotEmpty) return id;
+      } catch (_) {}
+    }
+    return 'guest';
+  }
 
   @override
   AiChatState build() {
@@ -184,8 +198,10 @@ class AiChatNotifier extends Notifier<AiChatState> {
       );
     });
 
-    // Load history
-    _socket.loadHistory(_userId);
+    // Only load history for authenticated users — anonymous sessions start fresh
+    if (ref.read(authProvider)) {
+      _socket.loadHistory(_userId);
+    }
   }
 
   void send(String text) {

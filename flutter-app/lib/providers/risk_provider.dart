@@ -147,11 +147,15 @@ class RiskNotifier extends ChangeNotifier {
       _entryPrice - (_entryPrice * liquidationDistance / 100);
   double get localRiskInDollars => _capital * _riskPercent / 100;
 
-  String get riskLevel =>
-      _leverage <= 3 ? 'Conservative' : _leverage <= 7 ? 'Moderate' : 'High Risk';
-  Color get riskColor => _leverage <= 3
+  String get riskLevel {
+    if (_leverage >= 10 || _riskPercent >= 5) return 'High Risk';
+    if (_leverage >= 5 || _riskPercent >= 2) return 'Moderate';
+    return 'Conservative';
+  }
+
+  Color get riskColor => riskLevel == 'Conservative'
       ? AppColors.brandGreen
-      : _leverage <= 7
+      : riskLevel == 'Moderate'
           ? AppColors.brandAmber
           : AppColors.brandRed;
 

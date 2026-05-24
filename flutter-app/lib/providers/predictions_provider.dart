@@ -25,9 +25,10 @@ final _repo = PredictionsRepoImpl();
 
 // ── Leaderboard ────────────────────────────────────────────────────────────────
 
+// Family param is the timeframe string: '7d' | '30d' | '90d' | 'all'
 final leaderboardProvider =
-    FutureProvider.autoDispose<List<LeaderboardEntry>>((ref) async {
-  return _repo.fetchLeaderboard();
+    FutureProvider.autoDispose.family<List<LeaderboardEntry>, String>((ref, timeframe) async {
+  return _repo.fetchLeaderboard(timeframe: timeframe);
 });
 
 // ── Coin Accuracy (per coin) ───────────────────────────────────────────────────

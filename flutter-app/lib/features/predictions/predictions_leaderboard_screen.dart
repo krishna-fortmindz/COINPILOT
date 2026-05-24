@@ -5,11 +5,22 @@ import '../../core/widgets/glass_card.dart';
 import '../../core/remote/data/predictions/models/predictions_models.dart';
 import '../../providers/predictions_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../providers/auth_provider.dart';
 
-class PredictionsLeaderboardScreen extends ConsumerWidget {
+class PredictionsLeaderboardScreen extends ConsumerStatefulWidget {
   const PredictionsLeaderboardScreen({super.key});
 
-  void _showMakePrediction(BuildContext context) {
+  @override
+  ConsumerState<PredictionsLeaderboardScreen> createState() =>
+      _PredictionsLeaderboardScreenState();
+}
+
+class _PredictionsLeaderboardScreenState
+    extends ConsumerState<PredictionsLeaderboardScreen> {
+  String _timeframe = '30d';
+  static const _timeframes = ['7d', '30d', '90d', 'all'];
+
+  void _showMakePrediction() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -18,15 +29,77 @@ class PredictionsLeaderboardScreen extends ConsumerWidget {
     );
   }
 
+  void _showAuthRequired() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgSecondary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                gradient: AppColors.gradientGreen,
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+              ),
+              child: const Icon(Icons.lock_outline_rounded,
+                  color: Colors.black, size: 24),
+            ),
+            const SizedBox(height: 16),
+            const Text('Sign In Required',
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white)),
+            const SizedBox(height: 8),
+            const Text(
+                'Create a free account to make predictions and track your accuracy.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 12, color: AppColors.textMuted, height: 1.5)),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandGreen,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Sign In / Register',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Maybe Later',
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final leaderboardAsync = ref.watch(leaderboardProvider);
+  Widget build(BuildContext context) {
+    final loggedIn = ref.watch(authProvider);
+    final leaderboardAsync = ref.watch(leaderboardProvider(_timeframe));
     final userState = ref.watch(userPredictionsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showMakePrediction(context),
+        onPressed: () =>
+            loggedIn ? _showMakePrediction() : _showAuthRequired(),
         backgroundColor: AppColors.brandGreen,
         foregroundColor: Colors.black,
         icon: const Icon(Icons.add_rounded, size: 20),
@@ -39,7 +112,7 @@ class PredictionsLeaderboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _Header(onRefresh: () {
-              ref.invalidate(leaderboardProvider);
+              ref.invalidate(leaderboardProvider(_timeframe));
               ref.read(userPredictionsProvider.notifier).refresh();
             }),
             const SizedBox(height: 20),
@@ -49,18 +122,63 @@ class PredictionsLeaderboardScreen extends ConsumerWidget {
             // My predictions history
             _MyPredictionsCard(mineAsync: userState.mine),
             const SizedBox(height: 20),
-            // Leaderboard
+            // Leaderboard section with timeframe filter
+            Row(
+              children: [
+                const Text(
+                  'Accuracy Rankings',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const Spacer(),
+                ..._timeframes.map((t) => GestureDetector(
+                      onTap: () => setState(() => _timeframe = t),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _timeframe == t
+                              ? AppColors.brandGreen.withAlpha(20)
+                              : AppColors.bgCard,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _timeframe == t
+                                ? AppColors.brandGreen
+                                : AppColors.borderSubtle,
+                          ),
+                        ),
+                        child: Text(
+                          t,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _timeframe == t
+                                ? AppColors.brandGreen
+                                : AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    )),
+              ],
+            ),
+            const SizedBox(height: 12),
             leaderboardAsync.when(
               loading: () => const Center(
                 child: Padding(
                   padding: EdgeInsets.all(40),
-                  child: CircularProgressIndicator(color: AppColors.brandGreen),
+                  child:
+                      CircularProgressIndicator(color: AppColors.brandGreen),
                 ),
               ),
               error: (e, _) => _ErrorCard(message: e.toString()),
-              data: (entries) => _LeaderboardList(entries: entries),
+              data: (entries) => _LeaderboardBody(entries: entries),
             ),
-            const SizedBox(height: 80), // FAB clearance
+            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -295,9 +413,9 @@ class _VsAiEmpty extends StatelessWidget {
   }
 }
 
-class _LeaderboardList extends StatelessWidget {
+class _LeaderboardBody extends StatelessWidget {
   final List<LeaderboardEntry> entries;
-  const _LeaderboardList({required this.entries});
+  const _LeaderboardBody({required this.entries});
 
   @override
   Widget build(BuildContext context) {
@@ -312,21 +430,8 @@ class _LeaderboardList extends StatelessWidget {
         ),
       );
     }
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Accuracy Rankings',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...entries.map((e) => _LeaderboardRow(entry: e)),
-      ],
+      children: entries.map((e) => _LeaderboardRow(entry: e)).toList(),
     );
   }
 }
@@ -348,7 +453,7 @@ class _LeaderboardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTop3 = entry.rank <= 3;
+    final isTop3 = entry.rank >= 1 && entry.rank <= 3;
     final rankColors = [
       AppColors.brandAmber,
       const Color(0xFFCCCCCC),

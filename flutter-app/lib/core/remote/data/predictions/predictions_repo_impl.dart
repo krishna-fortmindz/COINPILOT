@@ -28,18 +28,47 @@ class PredictionsRepoImpl implements PredictionsRepo {
     return raw ?? {};
   }
 
+  List<LeaderboardEntry> _parseLeaderboard(dynamic raw) {
+    List<dynamic> list = [];
+    if (raw is List) {
+      list = raw;
+    } else if (raw is Map<String, dynamic>) {
+      for (final key in ['rankings', 'leaderboard', 'entries', 'items', 'results', 'coins']) {
+        if (raw[key] is List) { list = raw[key] as List; break; }
+      }
+    }
+    // Sort by accuracyRate desc so rank = position even if backend returns unordered
+    final maps = list.whereType<Map<String, dynamic>>().toList();
+    maps.sort((a, b) {
+      final aRate = (a['accuracyRate'] ?? a['accuracy'] ?? 0) as num;
+      final bRate = (b['accuracyRate'] ?? b['accuracy'] ?? 0) as num;
+      return bRate.compareTo(aRate);
+    });
+    return maps
+        .asMap()
+        .entries
+        .map((e) => LeaderboardEntry.fromJson(e.value, rankOverride: e.key + 1))
+        .toList();
+  }
+
   @override
-  Future<List<LeaderboardEntry>> fetchLeaderboard() async {
+  Future<List<LeaderboardEntry>> fetchLeaderboard({String timeframe = '30d'}) async {
     final res = await _api.get<Map<String, dynamic>>(
       EndPoints.predictionsLeaderboard,
+      queryParams: {'timeframe': timeframe},
     );
-    return _parseList(res.data?['data'], LeaderboardEntry.fromJson);
+    final body = res.data ?? {};
+    final data = body['data'];
+    if (data != null) return _parseLeaderboard(data);
+    if (body['results'] is List) return _parseLeaderboard(body['results']);
+    return _parseLeaderboard(body);
   }
 
   @override
   Future<CoinAccuracy> fetchAccuracy(String coinId) async {
     final res = await _api.get<Map<String, dynamic>>(
       EndPoints.predictionAccuracy(coinId),
+      queryParams: {'timeframe': 'all'},
     );
     return CoinAccuracy.fromJson(_unwrap(res.data));
   }

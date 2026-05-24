@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 import 'package:ai_trading_copilot/core/end_points.dart';
 import 'package:ai_trading_copilot/services/pref_keys.dart';
@@ -73,11 +75,11 @@ class _TokenRefreshGuard {
   }
 
   Future<String> _doRefresh() async {
-    final refreshToken =
-        SharedPreferenceService.getValue(
-              PrefKeys.refreshToken,
-            ) ??
-            '';
+    String? refreshToken = SharedPreferenceService.getValue<String>(PrefKeys.refreshToken);
+    if (refreshToken == null || refreshToken.isEmpty) {
+      refreshToken = html.window.localStorage['coinastra_refresh'];
+    }
+    refreshToken ??= '';
 
     final dio = Dio(
       BaseOptions(
@@ -140,10 +142,13 @@ class _AuthInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) {
-    final token =
-        SharedPreferenceService.getValue(
-          PrefKeys.accessToken,
-        );
+    // Prefer SharedPreferences (in-memory cache), but fall back to the
+    // raw localStorage key written by Next.js — avoids a race condition on
+    // first page navigation before the async SharedPreferences sync completes.
+    String? token = SharedPreferenceService.getValue<String>(PrefKeys.accessToken);
+    if (token == null || token.isEmpty) {
+      token = html.window.localStorage['coinastra_access'];
+    }
 
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] =

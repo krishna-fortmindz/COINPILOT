@@ -3,6 +3,7 @@ const nextConfig = {
   output: "standalone",
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion"],
+    serverComponentsExternalPackages: ["socket.io-client", "engine.io-client"],
   },
 
   images: {

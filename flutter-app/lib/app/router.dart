@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/ai_analysis/ai_analysis_screen.dart';
 import '../features/charts/charts_screen.dart';
@@ -84,7 +86,7 @@ class _LoginPrompt extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
-                    // Navigate to login/signup — wired once auth screens are built
+                    html.window.location.assign('/auth/login');
                   },
                   child: const Text('Sign In / Create Account',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
@@ -92,7 +94,7 @@ class _LoginPrompt extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.go('/dashboard'),
                 child: const Text('Maybe Later',
                     style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
               ),
@@ -113,7 +115,12 @@ final router = GoRouter(
       builder: (context, state, child) => AppShell(child: child),
       routes: [
         GoRoute(path: '/dashboard', builder: (c, s) => const DashboardScreen()),
-        GoRoute(path: '/trade-now', builder: (c, s) => const TradeNowScreen()),
+        GoRoute(
+          path: '/trade-now',
+          builder: (c, s) => TradeNowScreen(
+            initialCoin: s.uri.queryParameters['coin'],
+          ),
+        ),
         GoRoute(path: '/analysis', builder: (c, s) => const AiAnalysisScreen()),
         GoRoute(path: '/charts', builder: (c, s) => const ChartsScreen()),
         GoRoute(path: '/memory', builder: (c, s) => const MarketMemoryScreen()),

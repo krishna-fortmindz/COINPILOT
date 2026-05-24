@@ -5,15 +5,16 @@ class EndPoints {
   // Backend Base URLs
   // ─────────────────────────────────────────────────────────────
 
-  static const String baseUrl = 'http://10.24.227.45:5000';
+  // static const String baseUrl = 'http://10.24.227.45:5000';
   // static const String baseUrl = 'https://crypto-backend-4557.onrender.com';
+  static const String baseUrl = 'http://localhost:8080';
 
   static const String apiBaseUrl = '$baseUrl/api/v1';
   static const String dashboardBaseUrl = '$apiBaseUrl/dashboard';
   static const String aiBaseUrl = '$baseUrl/api/ai';
 
-  // Socket.IO
-  static const String socketUrl = baseUrl;
+  // Socket.IO — connect through dev proxy to avoid browser CORS restrictions
+  static const String socketUrl = 'http://localhost:8080';
   static const String socketPath = '/socket.io';
 
   // ─────────────────────────────────────────────────────────────
@@ -84,8 +85,10 @@ class EndPoints {
   static const String sentimentSocial = '$baseUrl/api/sentiment/social';
   static String sentimentCoin(String coinId) =>
       '$baseUrl/api/sentiment/coins/$coinId';
-  static const String sentimentOnChain = '$baseUrl/api/sentiment/on-chain';
+  static const String sentimentOnChain = '$baseUrl/api/sentiment/onchain';
   static const String onchainIndicators = '$apiBaseUrl/onchain/indicators';
+  static String onchainIndicatorsWithParams({String symbol = 'BTC'}) =>
+      '$onchainIndicators?symbol=$symbol';
 
   // ─────────────────────────────────────────────────────────────
   // Portfolio (NEW — backend to build)
@@ -302,6 +305,40 @@ class EndPoints {
   static String alertEntry(String id) => '$alerts/$id';
 
   static String portfolioHolding(String id) => '$portfolioHoldings/$id';
+
+  // ─────────────────────────────────────────────────────────────
+  // Token Unlocks
+  // ─────────────────────────────────────────────────────────────
+  static const String tokenUnlocks = '$apiBaseUrl/token-unlocks';
+  static const String tokenUnlocksUpcoming = '$apiBaseUrl/token-unlocks/upcoming';
+  static String tokenUnlocksWithParams({int page = 1, int limit = 20}) =>
+      Uri.parse(tokenUnlocks).replace(queryParameters: {'page': '$page', 'limit': '$limit'}).toString();
+  static String tokenUnlocksUpcomingWithParams({int days = 30}) =>
+      Uri.parse(tokenUnlocksUpcoming).replace(queryParameters: {'days': '$days'}).toString();
+
+  // ─────────────────────────────────────────────────────────────
+  // Market Memory
+  // ─────────────────────────────────────────────────────────────
+  static const String memoryPatterns = '$apiBaseUrl/memory/patterns';
+  static const String memorySimilarEvents = '$apiBaseUrl/memory/similar-events';
+  static const String memoryMarketCycles = '$apiBaseUrl/memory/market-cycles';
+  static const String memoryMacroContext = '$apiBaseUrl/memory/macro-context';
+  static String memoryPatternsWithParams({String symbol = 'BTC', int lookback = 365}) =>
+      Uri.parse(memoryPatterns).replace(queryParameters: {'symbol': symbol, 'lookback': '$lookback'}).toString();
+  static String memorySimilarEventsWithParams({String symbol = 'BTC', int limit = 5}) =>
+      Uri.parse(memorySimilarEvents).replace(queryParameters: {'symbol': symbol, 'limit': '$limit'}).toString();
+  static String memoryMarketCyclesWithParams({String symbol = 'BTC'}) =>
+      Uri.parse(memoryMarketCycles).replace(queryParameters: {'symbol': symbol}).toString();
+
+  // ─────────────────────────────────────────────────────────────
+  // Exchange Flows
+  // ─────────────────────────────────────────────────────────────
+  static const String exchangeFlowsNetflow = '$apiBaseUrl/exchange-flows/netflow';
+  static const String exchangeFlowsTopExchanges = '$apiBaseUrl/exchange-flows/top-exchanges';
+  static String exchangeFlowsNetflowWithParams({String symbol = 'BTC', int days = 30}) =>
+      Uri.parse(exchangeFlowsNetflow).replace(queryParameters: {'symbol': symbol, 'days': '$days'}).toString();
+  static String exchangeFlowsTopExchangesWithParams({int limit = 10}) =>
+      Uri.parse(exchangeFlowsTopExchanges).replace(queryParameters: {'limit': '$limit'}).toString();
 
   // ─────────────────────────────────────────────────────────────
   // Risk Management

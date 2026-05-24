@@ -1,179 +1,172 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
+import '../../providers/token_unlocks_provider.dart';
 
-class _Unlock {
-  final String symbol, name, emoji;
-  final String date, daysLeft;
-  final String amount, usdValue;
-  final double supplyPct;
-  final String riskLevel;
-  final String priceImpact;
-  final String category;
-  final String notes;
-
-  const _Unlock({
-    required this.symbol, required this.name, required this.emoji,
-    required this.date, required this.daysLeft,
-    required this.amount, required this.usdValue,
-    required this.supplyPct, required this.riskLevel,
-    required this.priceImpact, required this.category, required this.notes,
-  });
-}
-
-const _unlocks = [
-  _Unlock(
-    symbol: 'APT', name: 'Aptos', emoji: '⚡',
-    date: 'May 22, 2026', daysLeft: '2 days',
-    amount: '11.3M APT', usdValue: '\$89.7M',
-    supplyPct: 4.2,
-    riskLevel: 'HIGH',
-    priceImpact: '-8% to -15%',
-    category: 'Team & Investors',
-    notes: 'Large team unlock from initial vesting cliff. Insiders historically sell within 2 weeks.',
-  ),
-  _Unlock(
-    symbol: 'ARB', name: 'Arbitrum', emoji: '🔷',
-    date: 'May 28, 2026', daysLeft: '8 days',
-    amount: '92.7M ARB', usdValue: '\$121.5M',
-    supplyPct: 2.8,
-    riskLevel: 'HIGH',
-    priceImpact: '-5% to -12%',
-    category: 'Investors',
-    notes: 'Quarterly investor unlock per vesting schedule. Similar unlock in Feb caused -9% in 3 days.',
-  ),
-  _Unlock(
-    symbol: 'WLD', name: 'Worldcoin', emoji: '🌐',
-    date: 'Jun 3, 2026', daysLeft: '14 days',
-    amount: '18.5M WLD', usdValue: '\$48.1M',
-    supplyPct: 3.1,
-    riskLevel: 'MEDIUM',
-    priceImpact: '-3% to -8%',
-    category: 'Team',
-    notes: 'Monthly linear unlock for team members. Price has stabilized around unlock dates recently.',
-  ),
-  _Unlock(
-    symbol: 'SUI', name: 'Sui', emoji: '💧',
-    date: 'Jun 10, 2026', daysLeft: '21 days',
-    amount: '64.2M SUI', usdValue: '\$76.3M',
-    supplyPct: 1.9,
-    riskLevel: 'MEDIUM',
-    priceImpact: '-2% to -6%',
-    category: 'Early Contributors',
-    notes: 'Smaller relative unlock. Ecosystem fund keeps buying pressure to offset sell pressure.',
-  ),
-  _Unlock(
-    symbol: 'STRK', name: 'Starknet', emoji: '⭐',
-    date: 'Jun 15, 2026', daysLeft: '26 days',
-    amount: '128M STRK', usdValue: '\$92.2M',
-    supplyPct: 8.5,
-    riskLevel: 'EXTREME',
-    priceImpact: '-15% to -30%',
-    category: 'Foundation & Investors',
-    notes: 'Massive 8.5% supply unlock. Investors have been selling every unlock since TGE. Avoid long exposure.',
-  ),
-  _Unlock(
-    symbol: 'IMX', name: 'Immutable', emoji: '🎮',
-    date: 'Jul 1, 2026', daysLeft: '42 days',
-    amount: '22.8M IMX', usdValue: '\$41.2M',
-    supplyPct: 1.5,
-    riskLevel: 'LOW',
-    priceImpact: '-1% to -3%',
-    category: 'Ecosystem Fund',
-    notes: 'Ecosystem allocation used for grants and development. Typically not sold on market.',
-  ),
-];
-
-class TokenUnlocksScreen extends StatefulWidget {
+class TokenUnlocksScreen extends ConsumerStatefulWidget {
   const TokenUnlocksScreen({super.key});
 
   @override
-  State<TokenUnlocksScreen> createState() => _TokenUnlocksScreenState();
+  ConsumerState<TokenUnlocksScreen> createState() => _TokenUnlocksScreenState();
 }
 
-class _TokenUnlocksScreenState extends State<TokenUnlocksScreen> {
+class _TokenUnlocksScreenState extends ConsumerState<TokenUnlocksScreen> {
   String _query = '';
   final _searchCtrl = TextEditingController();
+  final _searchFocus = FocusNode();
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
-  List<_Unlock> get _filtered {
-    if (_query.isEmpty) return _unlocks;
+  List<TokenUnlock> _filtered(List<TokenUnlock> all) {
+    if (_query.isEmpty) return all;
     final q = _query.toLowerCase();
-    return _unlocks.where((u) =>
+    return all.where((u) =>
       u.symbol.toLowerCase().contains(q) ||
       u.name.toLowerCase().contains(q) ||
-      u.category.toLowerCase().contains(q)
+      (u.category?.toLowerCase().contains(q) ?? false)
     ).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filtered;
-    final highRisk = _unlocks.where((u) => u.riskLevel == 'HIGH' || u.riskLevel == 'EXTREME').length;
+    final asyncData = ref.watch(upcomingUnlocksProvider);
 
+    // Search bar lives OUTSIDE asyncData.when so it never rebuilds from scratch
+    // on query changes — preserving focus on Flutter web.
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader('\$469.0M', highRisk),
-                  const SizedBox(height: 16),
-                  _buildSearchBar(),
-                  if (_query.isEmpty) ...[
-                    const SizedBox(height: 20),
-                    _buildSummaryRow(),
-                    const SizedBox(height: 20),
-                    _buildTimeline(),
-                  ],
-                  const SizedBox(height: 20),
-                  Text(
-                    _query.isEmpty
-                      ? 'Upcoming Unlocks'
-                      : '${filtered.length} result${filtered.length == 1 ? '' : 's'} for "$_query"',
-                    style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Always-stable header + search ──────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeaderStatic(asyncData),
+                const SizedBox(height: 16),
+                _buildSearchBar(),
+                const SizedBox(height: 4),
+              ],
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-            sliver: filtered.isEmpty
-              ? SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Center(
-                      child: Text('No unlocks found for "$_query"',
-                        style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+          // ── Async content ───────────────────────────────────────
+          Expanded(
+            child: asyncData.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.brandAmber),
+              ),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: AppColors.brandRed, size: 40),
+                    const SizedBox(height: 12),
+                    const Text('Failed to load token unlocks',
+                        style: TextStyle(color: Colors.white, fontSize: 14)),
+                    const SizedBox(height: 6),
+                    Text(e.toString(),
+                        style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                        textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => ref.invalidate(upcomingUnlocksProvider),
+                      child: const Text('Retry', style: TextStyle(color: AppColors.brandAmber)),
                     ),
-                  ),
-                )
-              : SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (_, i) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _UnlockCard(unlock: filtered[i]),
-                    ),
-                    childCount: filtered.length,
-                  ),
+                  ],
                 ),
+              ),
+              data: (unlocks) {
+                final filtered = _filtered(unlocks);
+                final highRisk = unlocks.where((u) => u.riskLevel == 'HIGH' || u.riskLevel == 'EXTREME').length;
+                final totalUsd = unlocks.fold<double>(0, (sum, u) => sum + (u.valueUsd ?? 0));
+                final biggest = unlocks.isEmpty
+                    ? null
+                    : unlocks.reduce((a, b) => (a.supplyPct ?? 0) >= (b.supplyPct ?? 0) ? a : b);
+
+                return CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_query.isEmpty) ...[
+                              _buildSummaryRow(totalUsd, highRisk, biggest),
+                              const SizedBox(height: 20),
+                              _buildTimeline(unlocks),
+                              const SizedBox(height: 20),
+                            ],
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _query.isEmpty
+                                      ? 'Upcoming Unlocks (${unlocks.length})'
+                                      : '${filtered.length} result${filtered.length == 1 ? '' : 's'} for "$_query"',
+                                    style: const TextStyle(
+                                      fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => ref.invalidate(upcomingUnlocksProvider),
+                                  child: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.textMuted),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                      sliver: filtered.isEmpty
+                        ? SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: Center(
+                                child: Text(
+                                  _query.isEmpty ? 'No upcoming unlocks' : 'No unlocks found for "$_query"',
+                                  style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                                ),
+                              ),
+                            ),
+                          )
+                        : SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (_, i) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _UnlockCard(unlock: filtered[i]),
+                              ),
+                              childCount: filtered.length,
+                            ),
+                          ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildHeaderStatic(AsyncValue<List<TokenUnlock>> asyncData) {
+    final count = asyncData.value?.length ?? 0;
+    final totalUsd = asyncData.value?.fold<double>(0, (s, u) => s + (u.valueUsd ?? 0)) ?? 0;
+    return _buildHeader(count, totalUsd);
   }
 
   Widget _buildSearchBar() {
@@ -192,6 +185,7 @@ class _TokenUnlocksScreenState extends State<TokenUnlocksScreen> {
           Expanded(
             child: TextField(
               controller: _searchCtrl,
+              focusNode: _searchFocus,
               style: const TextStyle(fontSize: 14, color: Colors.white),
               onChanged: (v) => setState(() => _query = v),
               decoration: const InputDecoration(
@@ -219,7 +213,7 @@ class _TokenUnlocksScreenState extends State<TokenUnlocksScreen> {
     );
   }
 
-  Widget _buildHeader(String totalValue, int highRisk) {
+  Widget _buildHeader(int count, double totalUsd) {
     return Row(
       children: [
         const Expanded(
@@ -235,80 +229,106 @@ class _TokenUnlocksScreenState extends State<TokenUnlocksScreen> {
             ],
           ),
         ),
-        NeonBadge(label: '6 upcoming', color: AppColors.brandAmber),
+        NeonBadge(label: '$count upcoming', color: AppColors.brandAmber),
       ],
     );
   }
 
-  Widget _buildSummaryRow() {
+  Widget _buildSummaryRow(double totalUsd, int highRisk, TokenUnlock? biggest) {
+    final totalLabel = _formatUsd(totalUsd);
+    final biggestLabel = biggest?.symbol ?? '—';
+    final biggestSub = biggest != null && biggest.supplyPct != null
+        ? '${biggest.supplyPct!.toStringAsFixed(1)}% supply'
+        : '—';
+
     return Row(
       children: [
-        Expanded(child: _SummaryTile('\$469M', 'Total Unlock Value', '42 days', AppColors.brandAmber)),
+        Expanded(child: _SummaryTile(totalLabel, 'Total Unlock Value', '30 days', AppColors.brandAmber)),
         const SizedBox(width: 12),
-        Expanded(child: _SummaryTile('3', 'High Risk Events', 'Monitor closely', AppColors.brandRed)),
+        Expanded(child: _SummaryTile('$highRisk', 'High Risk Events', 'Monitor closely', AppColors.brandRed)),
         const SizedBox(width: 12),
-        Expanded(child: _SummaryTile('STRK', 'Biggest Risk', '8.5% supply', AppColors.brandRed)),
+        Expanded(child: _SummaryTile(biggestLabel, 'Biggest Risk', biggestSub, AppColors.brandRed)),
       ],
     );
   }
 
-  Widget _buildTimeline() {
+  Widget _buildTimeline(List<TokenUnlock> unlocks) {
+    final timelineItems = unlocks.take(6).toList();
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Unlock Timeline (Next 42 Days)', style: TextStyle(
+          const Text('Unlock Timeline (Next 30 Days)', style: TextStyle(
             fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white,
           )),
           const SizedBox(height: 16),
-          ..._unlocks.map((u) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 60,
-                  child: Text(u.daysLeft, style: const TextStyle(
-                    fontSize: 10, color: AppColors.textMuted,
-                  )),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text('${u.emoji} ${u.symbol}', style: const TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white,
-                          )),
-                          const Spacer(),
-                          Text(u.usdValue, style: TextStyle(
-                            fontSize: 10, fontWeight: FontWeight.w700,
-                            color: _riskColor(u.riskLevel),
-                            fontFamily: 'JetBrainsMono',
-                          )),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: u.supplyPct / 10,
-                          backgroundColor: AppColors.borderSubtle,
-                          valueColor: AlwaysStoppedAnimation(_riskColor(u.riskLevel)),
-                          minHeight: 3,
-                        ),
-                      ),
-                    ],
+          ...timelineItems.map((u) {
+            final daysStr = u.daysLeft != null ? '${u.daysLeft} days' : _formatDate(u.unlockDate);
+            final emojiStr = u.emoji ?? (u.symbol.isNotEmpty ? u.symbol[0] : '?');
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 60,
+                    child: Text(daysStr, style: const TextStyle(
+                      fontSize: 10, color: AppColors.textMuted,
+                    )),
                   ),
-                ),
-              ],
-            ),
-          )),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text('$emojiStr ${u.symbol}', style: const TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white,
+                            )),
+                            const Spacer(),
+                            Text(
+                              u.valueUsd != null ? _formatUsd(u.valueUsd!) : '—',
+                              style: TextStyle(
+                                fontSize: 10, fontWeight: FontWeight.w700,
+                                color: _riskColor(u.riskLevel),
+                                fontFamily: 'JetBrainsMono',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: ((u.supplyPct ?? 0) / 10).clamp(0.0, 1.0),
+                            backgroundColor: AppColors.borderSubtle,
+                            valueColor: AlwaysStoppedAnimation(_riskColor(u.riskLevel)),
+                            minHeight: 3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
   }
+}
+
+String _formatDate(DateTime? dt) {
+  if (dt == null) return '—';
+  return DateFormat('MMM d, y').format(dt);
+}
+
+String _formatUsd(double v) {
+  if (v >= 1e9) return '\$${(v / 1e9).toStringAsFixed(1)}B';
+  if (v >= 1e6) return '\$${(v / 1e6).toStringAsFixed(1)}M';
+  if (v >= 1e3) return '\$${(v / 1e3).toStringAsFixed(1)}K';
+  return '\$${v.toStringAsFixed(0)}';
 }
 
 Color _riskColor(String risk) {
@@ -345,12 +365,17 @@ class _SummaryTile extends StatelessWidget {
 }
 
 class _UnlockCard extends StatelessWidget {
-  final _Unlock unlock;
-  const _UnlockCard({super.key, required this.unlock});
+  final TokenUnlock unlock;
+  const _UnlockCard({required this.unlock});
 
   @override
   Widget build(BuildContext context) {
     final color = _riskColor(unlock.riskLevel);
+    final emojiStr = unlock.emoji ?? (unlock.symbol.isNotEmpty ? unlock.symbol[0] : '?');
+    final dateStr = _formatDate(unlock.unlockDate);
+    final daysStr = unlock.daysLeft != null ? '${unlock.daysLeft} days' : '—';
+    final usdStr = unlock.valueUsd != null ? _formatUsd(unlock.valueUsd!) : '—';
+    final supplyStr = unlock.supplyPct != null ? '${unlock.supplyPct!.toStringAsFixed(1)}%' : '—';
 
     return GlassCard(
       borderColor: color.withAlpha(30),
@@ -366,7 +391,7 @@ class _UnlockCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AppColors.borderSubtle),
                 ),
-                child: Center(child: Text(unlock.emoji,
+                child: Center(child: Text(emojiStr,
                   style: const TextStyle(fontSize: 20))),
               ),
               const SizedBox(width: 12),
@@ -392,20 +417,21 @@ class _UnlockCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Text('${unlock.name} · ${unlock.category}', style: const TextStyle(
-                      fontSize: 11, color: AppColors.textMuted,
-                    )),
+                    Text(
+                      '${unlock.name}${unlock.category != null ? ' · ${unlock.category}' : ''}',
+                      style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                    ),
                   ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(unlock.usdValue, style: const TextStyle(
+                  Text(usdStr, style: const TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w800,
                     color: Colors.white, fontFamily: 'JetBrainsMono',
                   )),
-                  Text(unlock.date, style: const TextStyle(
+                  Text(dateStr, style: const TextStyle(
                     fontSize: 10, color: AppColors.textMuted,
                   )),
                 ],
@@ -417,26 +443,28 @@ class _UnlockCard extends StatelessWidget {
             children: [
               _UnlockStat('Amount', unlock.amount, AppColors.textMuted),
               const SizedBox(width: 8),
-              _UnlockStat('% Supply', '${unlock.supplyPct}%', color),
+              _UnlockStat('% Supply', supplyStr, color),
               const SizedBox(width: 8),
-              _UnlockStat('In', unlock.daysLeft, AppColors.brandBlue),
+              _UnlockStat('In', daysStr, AppColors.brandBlue),
               const SizedBox(width: 8),
-              _UnlockStat('Est. Impact', unlock.priceImpact, color),
+              _UnlockStat('Est. Impact', unlock.priceImpact ?? '—', color),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.lightbulb_outline_rounded, size: 13, color: AppColors.brandAmber),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(unlock.notes, style: const TextStyle(
-                  fontSize: 11, color: AppColors.textMuted, height: 1.5,
-                )),
-              ),
-            ],
-          ),
+          if (unlock.notes != null && unlock.notes!.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.lightbulb_outline_rounded, size: 13, color: AppColors.brandAmber),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(unlock.notes!, style: const TextStyle(
+                    fontSize: 11, color: AppColors.textMuted, height: 1.5,
+                  )),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

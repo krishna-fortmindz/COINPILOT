@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import '../theme/app_colors.dart';
+import '../../providers/auth_provider.dart';
 
 class AppSidebar extends StatelessWidget {
   const AppSidebar({super.key});
@@ -220,14 +224,36 @@ class _SidebarItem extends StatelessWidget {
   }
 }
 
-class _SidebarFooter extends StatelessWidget {
+class _SidebarFooter extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authNotifierProvider);
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.borderSubtle)),
       ),
+      child: authState.isLoggedIn
+          ? _LoggedInFooter(authState: authState, ref: ref)
+          : _SignInFooter(),
+    );
+  }
+}
+
+class _LoggedInFooter extends StatelessWidget {
+  final AuthState authState;
+  final WidgetRef ref;
+  const _LoggedInFooter({required this.authState, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = authState.user;
+    final initial = (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : 'U';
+    final displayName = user?.name ?? 'User';
+
+    return GestureDetector(
+      onTap: () => context.go('/profile'),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -243,28 +269,58 @@ class _SidebarFooter extends StatelessWidget {
                 color: AppColors.brandGreen.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Center(
-                child: Text('J', style: TextStyle(
+              child: Center(
+                child: Text(initial, style: const TextStyle(
                   fontSize: 13, fontWeight: FontWeight.w700,
                   color: AppColors.brandGreen,
                 )),
               ),
             ),
             const SizedBox(width: 8),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('John Doe', style: TextStyle(
+                  Text(displayName, style: const TextStyle(
                     fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white,
-                  )),
-                  Text('Pro Plan', style: TextStyle(
+                  ), overflow: TextOverflow.ellipsis),
+                  const Text('Authenticated', style: TextStyle(
                     fontSize: 10, color: AppColors.brandGreen,
                   )),
                 ],
               ),
             ),
-            const Icon(Icons.settings_rounded, size: 16, color: AppColors.textMuted),
+            GestureDetector(
+              onTap: () => ref.read(authNotifierProvider.notifier).logout(),
+              child: const Icon(Icons.logout_rounded, size: 16, color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SignInFooter extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => html.window.location.assign('/auth/login'),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.bgTertiary,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderSubtle),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.login_rounded, size: 15, color: AppColors.brandGreen),
+            SizedBox(width: 8),
+            Text('Sign In / Sign Up', style: TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.brandGreen,
+            )),
           ],
         ),
       ),

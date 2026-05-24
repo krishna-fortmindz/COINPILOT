@@ -3,24 +3,62 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { setTokens } from "@/lib/auth";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    window.location.href = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:5001";
+    setError("");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.message ?? "Invalid email or password");
+        setLoading(false);
+        return;
+      }
+      // Try every common backend response shape
+      const d = data?.data ?? data;
+      const accessToken =
+        d?.accessToken ?? d?.access_token ?? d?.token ?? d?.jwt ??
+        d?.tokens?.accessToken ?? d?.tokens?.access_token ?? d?.tokens?.access;
+      const refreshToken =
+        d?.refreshToken ?? d?.refresh_token ?? d?.refresh ??
+        d?.tokens?.refreshToken ?? d?.tokens?.refresh_token ?? d?.tokens?.refresh;
+      if (accessToken) {
+        setTokens(String(accessToken), refreshToken ? String(refreshToken) : "");
+      }
+      const user = d?.user ?? d?.profile;
+      if (user) {
+        localStorage.setItem("coinastra_user", JSON.stringify(user));
+      }
+      const base = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
+      // replace() removes login from history so back-button goes to landing, not login
+      window.location.replace(`${base}/dashboard`);
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-5">
       {/* Google */}
-      <button className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-white/10 bg-white/3 hover:bg-white/6 hover:border-white/15 transition-all text-sm font-medium text-white">
+      <button
+        type="button"
+        className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-white/10 bg-white/3 hover:bg-white/6 hover:border-white/15 transition-all text-sm font-medium text-white"
+      >
         <svg className="w-4 h-4" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -37,6 +75,12 @@ export default function LoginForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="px-3 py-2.5 rounded-xl text-xs text-[#ff3366] border border-[#ff3366]/20 bg-[#ff3366]/5">
+            {error}
+          </div>
+        )}
+
         {/* Email */}
         <div>
           <label className="block text-xs font-medium text-white/50 mb-1.5 uppercase tracking-wider">

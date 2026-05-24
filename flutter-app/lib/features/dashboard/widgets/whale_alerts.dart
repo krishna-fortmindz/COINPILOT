@@ -19,53 +19,51 @@ class WhaleAlerts extends ConsumerWidget {
     final liveAlerts = liveAsync.value ?? const <LiveWhaleAlert>[];
     final restAlerts = summaryAsync.valueOrNull?.whaleAlerts ?? _fallback;
 
-    final merged = <Widget>[];
+    // Build unified raw data list for "View All" sheet
+    final allAlertData = <_AlertData>[];
+    final cardWidgets = <Widget>[];
 
-    // For live alerts, let's build the rows.
     for (final a in liveAlerts) {
-      merged.add(
-        _AlertRow(
-          key: ValueKey('live_${a.symbol}_${a.amount}_${a.timestamp.millisecondsSinceEpoch}'),
-          symbol: a.symbol,
-          amount: a.amount,
-          amountUsd: a.amountUsd,
-          from: a.from,
-          to: a.to,
-          timestamp: a.timestamp,
-          toExchange: a.toExchange,
-          formattedAmount: a.formattedAmount,
-          emoji: a.emoji,
-          isLive: true,
-        ),
+      final data = _AlertData(
+        symbol: a.symbol, amount: a.amount, amountUsd: a.amountUsd,
+        from: a.from, to: a.to, timestamp: a.timestamp,
+        toExchange: a.toExchange, formattedAmount: a.formattedAmount,
+        emoji: a.emoji, isLive: true,
       );
-    }
-
-    // Append rest alerts (avoiding duplicates based on symbol and timestamp)
-    for (final a in restAlerts) {
-      if (merged.length >= 5) break;
-      final isDuplicate = liveAlerts.any((la) =>
-          la.symbol == a.symbol &&
-          (la.timestamp.difference(a.timestamp).inSeconds.abs() < 5));
-      if (!isDuplicate) {
-        merged.add(
-          _AlertRow(
-            key: ValueKey('rest_${a.symbol}_${a.amount}_${a.timestamp.millisecondsSinceEpoch}'),
-            symbol: a.symbol,
-            amount: a.amount,
-            amountUsd: a.amountUsd,
-            from: a.from,
-            to: a.to,
-            timestamp: a.timestamp,
-            toExchange: a.toExchange,
-            formattedAmount: a.formattedAmount,
-            emoji: a.emoji,
-            isLive: false,
-          ),
-        );
+      allAlertData.add(data);
+      if (cardWidgets.length < 5) {
+        cardWidgets.add(_AlertRow(
+          key: ValueKey('live_${a.symbol}_${a.amount}_${a.timestamp.millisecondsSinceEpoch}'),
+          symbol: a.symbol, amount: a.amount, amountUsd: a.amountUsd,
+          from: a.from, to: a.to, timestamp: a.timestamp,
+          toExchange: a.toExchange, formattedAmount: a.formattedAmount,
+          emoji: a.emoji, isLive: true,
+        ));
       }
     }
 
-    final finalItems = merged.take(5).toList();
+    for (final a in restAlerts) {
+      final isDuplicate = liveAlerts.any((la) =>
+          la.symbol == a.symbol &&
+          la.timestamp.difference(a.timestamp).inSeconds.abs() < 5);
+      if (!isDuplicate) {
+        allAlertData.add(_AlertData(
+          symbol: a.symbol, amount: a.amount, amountUsd: a.amountUsd,
+          from: a.from, to: a.to, timestamp: a.timestamp,
+          toExchange: a.toExchange, formattedAmount: a.formattedAmount,
+          emoji: a.emoji, isLive: false,
+        ));
+        if (cardWidgets.length < 5) {
+          cardWidgets.add(_AlertRow(
+            key: ValueKey('rest_${a.symbol}_${a.amount}_${a.timestamp.millisecondsSinceEpoch}'),
+            symbol: a.symbol, amount: a.amount, amountUsd: a.amountUsd,
+            from: a.from, to: a.to, timestamp: a.timestamp,
+            toExchange: a.toExchange, formattedAmount: a.formattedAmount,
+            emoji: a.emoji, isLive: false,
+          ));
+        }
+      }
+    }
 
     return GlassCard(
       child: Column(
@@ -84,19 +82,20 @@ class WhaleAlerts extends ConsumerWidget {
                 const SizedBox(width: 8),
               ],
               GestureDetector(
-                onTap: () => _showAllAlerts(context, finalItems),
+                onTap: () => _showAllAlerts(context, allAlertData),
                 child: const Text('View All', style: TextStyle(fontSize: 11, color: AppColors.brandGreen, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          ...finalItems,
+          ...cardWidgets,
         ],
       ),
     );
   }
 
-  void _showAllAlerts(BuildContext context, List<Widget> items) {
+  void _showAllAlerts(BuildContext context, List<_AlertData> allAlerts) {
+    final queryNotifier = ValueNotifier<String>('');
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -105,7 +104,8 @@ class WhaleAlerts extends ConsumerWidget {
         initialChildSize: 0.75,
         maxChildSize: 0.95,
         minChildSize: 0.4,
-        builder: (sheetCtx, scrollController) => Container(
+        expand: false,
+        builder: (innerCtx, scrollController) => Container(
           decoration: const BoxDecoration(
             color: AppColors.bgSecondary,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -114,8 +114,7 @@ class WhaleAlerts extends ConsumerWidget {
             children: [
               Container(
                 margin: const EdgeInsets.only(top: 10, bottom: 16),
-                width: 36,
-                height: 4,
+                width: 36, height: 4,
                 decoration: BoxDecoration(
                   color: AppColors.borderDefault,
                   borderRadius: BorderRadius.circular(2),
@@ -125,21 +124,62 @@ class WhaleAlerts extends ConsumerWidget {
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    'All Whale Alerts',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                  child: Text('All Whale Alerts',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.bgCard,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
+                  child: TextField(
+                    style: const TextStyle(fontSize: 13, color: Colors.white),
+                    onChanged: (v) => queryNotifier.value = v,
+                    decoration: const InputDecoration(
+                      hintText: 'Search by coin...',
+                      hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textMuted),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
               ),
               Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                  children: items,
+                child: ValueListenableBuilder<String>(
+                  valueListenable: queryNotifier,
+                  builder: (_, query, __) {
+                    final filtered = query.isEmpty
+                        ? allAlerts
+                        : allAlerts
+                            .where((a) => a.symbol.toLowerCase().contains(query.toLowerCase()))
+                            .toList();
+                    if (filtered.isEmpty) {
+                      return const Center(
+                        child: Text('No results',
+                            style: TextStyle(fontSize: 13, color: AppColors.textMuted)));
+                    }
+                    return ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                      itemCount: filtered.length,
+                      itemBuilder: (_, i) {
+                        final a = filtered[i];
+                        return _AlertRow(
+                          symbol: a.symbol, amount: a.amount,
+                          amountUsd: a.amountUsd, from: a.from, to: a.to,
+                          timestamp: a.timestamp, toExchange: a.toExchange,
+                          formattedAmount: a.formattedAmount,
+                          emoji: a.emoji, isLive: a.isLive,
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
             ],
@@ -167,6 +207,32 @@ class WhaleAlerts extends ConsumerWidget {
       from: 'Unknown', to: 'OKX',
       timestamp: _now.subtract(const Duration(hours: 1))),
   ];
+}
+
+class _AlertData {
+  final String symbol;
+  final double amount;
+  final double amountUsd;
+  final String from;
+  final String to;
+  final DateTime timestamp;
+  final bool toExchange;
+  final String formattedAmount;
+  final String emoji;
+  final bool isLive;
+
+  const _AlertData({
+    required this.symbol,
+    required this.amount,
+    required this.amountUsd,
+    required this.from,
+    required this.to,
+    required this.timestamp,
+    required this.toExchange,
+    required this.formattedAmount,
+    required this.emoji,
+    required this.isLive,
+  });
 }
 
 class _AlertRow extends StatelessWidget {

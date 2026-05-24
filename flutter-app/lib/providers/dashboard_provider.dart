@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/remote/data/dashboard/dashboard_repo_impl.dart';
 import '../core/remote/data/dashboard/models/dashboard_models.dart';
 import '../core/remote/web_socket_baseclass.dart';
+import '../core/remote/api_client.dart';
+import '../core/end_points.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dashboard Summary  (coins + fearGreed + trending + whales + ai + funding)
@@ -85,4 +87,23 @@ final liveFundingProvider = StreamProvider<List<LiveFundingRate>>((ref) {
   socket.connect();
   ref.onDispose(socket.disconnect);
   return socket.fundingStream;
+});
+
+// Funding rate history for a specific symbol (e.g. 'BTCUSDT')
+final fundingHistoryProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>(
+        (ref, symbol) async {
+  final res = await ApiClient.instance
+      .get<dynamic>(EndPoints.fundingRatesWithSymbol(symbol: symbol, limit: 20));
+  final body = res.data;
+  List<dynamic> list = const [];
+  if (body is List) {
+    list = body;
+  } else if (body is Map) {
+    final inner = body['data'] ?? body['rates'] ?? body['fundingRates'] ?? body['result'];
+    if (inner is List) list = inner;
+  }
+  return list
+      .whereType<Map<String, dynamic>>()
+      .toList();
 });

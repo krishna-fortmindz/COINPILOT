@@ -9,14 +9,21 @@ import '../../providers/trade_now_provider.dart';
 import '../../providers/dashboard_provider.dart';
 
 class TradeNowScreen extends ConsumerStatefulWidget {
-  const TradeNowScreen({super.key});
+  final String? initialCoin;
+  const TradeNowScreen({super.key, this.initialCoin});
 
   @override
   ConsumerState<TradeNowScreen> createState() => _TradeNowScreenState();
 }
 
 class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
-  String _selectedCoin = 'BTC';
+  late String _selectedCoin;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCoin = widget.initialCoin?.toUpperCase() ?? 'BTC';
+  }
 
   Color _verdictColor(VerdictType t) {
     switch (t) {
@@ -69,35 +76,98 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
   }
 
   Widget _buildContent(TradeNowData data, double? livePrice) {
+    final signal = data.signal;
+
+    if (signal.coinNotSupported) {
+      return _buildUnsupportedCoin();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildVerdictCard(data.signal, livePrice),
+        _buildVerdictCard(signal, livePrice),
         const SizedBox(height: 16),
-        LayoutBuilder(builder: (_, c) {
-          if (c.maxWidth < 700) {
-            return Column(children: [
-              _buildMetricsGrid(data),
-              const SizedBox(height: 16),
-              _buildLevelsCard(data.signal),
-            ]);
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 3, child: _buildMetricsGrid(data)),
-              const SizedBox(width: 16),
-              Expanded(flex: 2, child: _buildLevelsCard(data.signal)),
-            ],
-          );
-        }),
-        const SizedBox(height: 16),
-        _buildReasoningCard(data.signal),
-        if (data.history.isNotEmpty) ...[
+        if (!signal.futuresAvailable) ...[
+          _buildSpotOnlyNotice(),
           const SizedBox(height: 16),
-          _buildHistoricalSetups(data.history),
+          _buildLevelsCard(signal),
+          const SizedBox(height: 16),
+          _buildReasoningCard(signal),
+        ] else ...[
+          LayoutBuilder(builder: (_, c) {
+            if (c.maxWidth < 700) {
+              return Column(children: [
+                _buildMetricsGrid(data),
+                const SizedBox(height: 16),
+                _buildLevelsCard(signal),
+              ]);
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: _buildMetricsGrid(data)),
+                const SizedBox(width: 16),
+                Expanded(flex: 2, child: _buildLevelsCard(signal)),
+              ],
+            );
+          }),
+          const SizedBox(height: 16),
+          _buildReasoningCard(signal),
+          if (data.history.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildHistoricalSetups(data.history),
+          ],
         ],
       ],
+    );
+  }
+
+  Widget _buildUnsupportedCoin() {
+    return GlassCard(
+      borderColor: AppColors.brandAmber.withAlpha(40),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          children: [
+            const Icon(Icons.search_off_rounded, color: AppColors.brandAmber, size: 36),
+            const SizedBox(height: 12),
+            Text(
+              '$_selectedCoin is not a recognized trading pair',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Try BTC, ETH, SOL, BNB, XRP, DOGE, or any Binance-listed coin.',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpotOnlyNotice() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.brandBlue.withAlpha(12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.brandBlue.withAlpha(35)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.info_outline_rounded, size: 14, color: AppColors.brandBlue),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Spot-only coin — futures metrics (OI, funding rate, L/S ratio) are not available. Trade levels use S/R + Fibonacci.',
+              style: TextStyle(fontSize: 11, color: AppColors.brandBlue, height: 1.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -264,8 +334,8 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
 
   Widget _buildLevelsCard(SignalData s) {
     final showNoLevelsNotice = s.entry == '—' ||
-        s.entry.contains('0–') ||
-        s.entry.contains('0.00');
+        s.entry == '\$0–\$0' ||
+        s.entry == '\$0.00–\$0.00';
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

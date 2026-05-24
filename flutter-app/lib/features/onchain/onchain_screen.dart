@@ -1,20 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math' as math;
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/coin_selector.dart';
 import '../../providers/ai_analysis_provider.dart';
 import '../../providers/charts_provider.dart';
-
-List<FlSpot> _mockFlows(bool inflow) {
-  final rng = math.Random(inflow ? 11 : 22);
-  return List.generate(24, (i) {
-    final base = inflow ? 2000.0 : 1500.0;
-    return FlSpot(i.toDouble(), base + rng.nextDouble() * 1000 - 500);
-  });
-}
+import '../../providers/exchange_flows_provider.dart';
+import '../../providers/onchain_indicators_provider.dart';
 
 class OnchainScreen extends ConsumerStatefulWidget {
   const OnchainScreen({super.key});
@@ -48,24 +41,26 @@ class _OnchainScreenState extends ConsumerState<OnchainScreen> {
                   const SizedBox(height: 16),
                   LayoutBuilder(builder: (_, c) {
                     if (c.maxWidth < 700) {
-                      return const Column(
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _OnChainMetricsCard(),
-                          SizedBox(height: 16),
-                          _WhaleTransactionsList(),
+                          _OnChainMetricsCard(symbol: _selectedCoin),
+                          const SizedBox(height: 16),
+                          const _WhaleTransactionsList(),
                         ],
                       );
                     }
-                    return const Row(
+                    return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _OnChainMetricsCard()),
-                        SizedBox(width: 16),
-                        Expanded(child: _WhaleTransactionsList()),
+                        Expanded(child: _OnChainMetricsCard(symbol: _selectedCoin)),
+                        const SizedBox(width: 16),
+                        const Expanded(child: _WhaleTransactionsList()),
                       ],
                     );
                   }),
+                  const SizedBox(height: 16),
+                  _buildTopExchanges(),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -108,14 +103,55 @@ class _OnchainScreenState extends ConsumerState<OnchainScreen> {
   }
 
   Widget _buildMetricsRow() {
-    return LayoutBuilder(builder: (_, c) {
-      final tiles = [
-        _FlowTile('Exchange Inflow', '2,847 $_selectedCoin', '\$277.4M', false),
-        _FlowTile('Exchange Outflow', '4,120 $_selectedCoin', '\$401.6M', true),
-        _FlowTile('Net Flow', '-1,273 $_selectedCoin', '-\$124.2M', true),
-        _FlowTile('Exchange Reserve', '2.31M $_selectedCoin', '12.4% supply', false),
-      ];
+    final flowAsync = ref.watch(exchangeFlowsNetflowProvider(_selectedCoin));
+    return flowAsync.when(
+      loading: () => const SizedBox(
+        height: 80,
+        child: Center(child: CircularProgressIndicator(color: AppColors.brandBlue, strokeWidth: 2)),
+      ),
+      error: (_, __) => _buildMetricsRowFallback(),
+      data: (flow) {
+        String fmt(double v) {
+          if (v.abs() >= 1e9) return '${(v / 1e9).toStringAsFixed(2)}B';
+          if (v.abs() >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
+          if (v.abs() >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
+          return v.toStringAsFixed(0);
+        }
+        final symbol = flow.symbol;
+        final exchangeCount = flow.exchangeBreakdown.length;
+        final tiles = [
+          _FlowTile('Exchange Inflow', '${fmt(flow.totalInflow)} $symbol', '30d total', false),
+          _FlowTile('Exchange Outflow', '${fmt(flow.totalOutflow)} $symbol', '30d total', true),
+          _FlowTile(
+            'Net Flow',
+            '${flow.netflow >= 0 ? '+' : ''}${fmt(flow.netflow)} $symbol',
+            flow.isBullish ? 'Bullish signal' : 'Bearish signal',
+            flow.isBullish,
+          ),
+          _FlowTile(
+            'Exchanges Tracked',
+            exchangeCount > 0 ? '$exchangeCount exchanges' : '—',
+            '${flow.days ?? 30}d window',
+            true,
+          ),
+        ];
+        return _metricsLayout(tiles);
+      },
+    );
+  }
 
+  Widget _buildMetricsRowFallback() {
+    final tiles = [
+      const _FlowTile('Exchange Inflow', '—', '', false),
+      const _FlowTile('Exchange Outflow', '—', '', true),
+      const _FlowTile('Net Flow', '—', '', false),
+      const _FlowTile('Exchange Reserve', '—', '', false),
+    ];
+    return _metricsLayout(tiles);
+  }
+
+  Widget _metricsLayout(List<_FlowTile> tiles) {
+    return LayoutBuilder(builder: (_, c) {
       if (c.maxWidth < 700) {
         return Column(
           children: [
@@ -132,74 +168,145 @@ class _OnchainScreenState extends ConsumerState<OnchainScreen> {
   }
 
   Widget _buildFlowChart() {
-    final inflowSpots = _mockFlows(true);
-    final outflowSpots = _mockFlows(false);
+    final flowAsync = ref.watch(exchangeFlowsNetflowProvider(_selectedCoin));
+    return flowAsync.when(
+      loading: () => const GlassCard(
+        child: SizedBox(
+          height: 180,
+          child: Center(child: CircularProgressIndicator(color: AppColors.brandBlue, strokeWidth: 2)),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (flow) {
+        // Build chart from exchange breakdown as proxy for per-exchange bar data
+        if (flow.exchangeBreakdown.isEmpty) return const SizedBox.shrink();
+        final bd = flow.exchangeBreakdown;
+        final inflowSpots = bd.asMap().entries
+            .map((e) => FlSpot(e.key.toDouble(), e.value.inflow)).toList();
+        final outflowSpots = bd.asMap().entries
+            .map((e) => FlSpot(e.key.toDouble(), e.value.outflow)).toList();
+        final signal = flow.isBullish
+            ? 'More outflow than inflow → Bullish (coins leaving exchanges)'
+            : 'More inflow than outflow → Bearish (coins entering exchanges)';
 
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        return GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Exchange Flows (24h)', style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white,
-              )),
-              const Spacer(),
-              _LegendDot(AppColors.brandGreen, 'Outflow'),
-              const SizedBox(width: 12),
-              _LegendDot(AppColors.brandRed, 'Inflow'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 140,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: AppColors.borderSubtle,
-                    strokeWidth: 0.5,
-                  ),
-                ),
-                titlesData: const FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                lineTouchData: const LineTouchData(enabled: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: outflowSpots,
-                    isCurved: true,
-                    color: AppColors.brandGreen,
-                    barWidth: 2,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.brandGreen.withAlpha(15),
-                    ),
-                  ),
-                  LineChartBarData(
-                    spots: inflowSpots,
-                    isCurved: true,
-                    color: AppColors.brandRed,
-                    barWidth: 2,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.brandRed.withAlpha(10),
-                    ),
-                  ),
+              Row(
+                children: [
+                  const Text('Exchange Flows (30d)', style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white,
+                  )),
+                  const Spacer(),
+                  const _LegendDot(AppColors.brandGreen, 'Outflow'),
+                  const SizedBox(width: 12),
+                  const _LegendDot(AppColors.brandRed, 'Inflow'),
                 ],
               ),
-            ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 140,
+                child: LineChart(
+                  LineChartData(
+                    gridData: FlGridData(
+                      show: true,
+                      drawVerticalLine: false,
+                      getDrawingHorizontalLine: (_) => const FlLine(
+                        color: AppColors.borderSubtle,
+                        strokeWidth: 0.5,
+                      ),
+                    ),
+                    titlesData: const FlTitlesData(show: false),
+                    borderData: FlBorderData(show: false),
+                    lineTouchData: const LineTouchData(enabled: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: outflowSpots,
+                        isCurved: true,
+                        color: AppColors.brandGreen,
+                        barWidth: 2,
+                        dotData: const FlDotData(show: false),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: AppColors.brandGreen.withAlpha(15),
+                        ),
+                      ),
+                      LineChartBarData(
+                        spots: inflowSpots,
+                        isCurved: true,
+                        color: AppColors.brandRed,
+                        barWidth: 2,
+                        dotData: const FlDotData(show: false),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: AppColors.brandRed.withAlpha(10),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(signal,
+                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          const Center(
-            child: Text('More outflow than inflow → Bullish signal (coins leaving exchanges)',
-              style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+        );
+      },
+    );
+  }
+
+  Widget _buildTopExchanges() {
+    final flowAsync = ref.watch(exchangeFlowsNetflowProvider(_selectedCoin));
+    return flowAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (flow) {
+        final breakdown = flow.exchangeBreakdown;
+        if (breakdown.isEmpty) return const SizedBox.shrink();
+        String fmt(double v) {
+          if (v.abs() >= 1e9) return '${(v / 1e9).toStringAsFixed(1)}B';
+          if (v.abs() >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
+          if (v.abs() >= 1e3) return '${(v / 1e3).toStringAsFixed(0)}K';
+          return v.toStringAsFixed(0);
+        }
+        return GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Top Exchange Flows · ${flow.symbol}', style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white,
+              )),
+              const SizedBox(height: 14),
+              ...breakdown.take(8).map((ex) {
+                // netflow > 0 = net inflow to exchange = bearish (red)
+                final isNetInflow = ex.netflow > 0;
+                final color = isNetInflow ? AppColors.brandRed : AppColors.brandGreen;
+                final sign = ex.netflow >= 0 ? '+' : '';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(ex.exchange, style: const TextStyle(
+                          fontSize: 12, color: Colors.white,
+                        )),
+                      ),
+                      Text('$sign${fmt(ex.netflow)}', style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700,
+                        color: color, fontFamily: 'JetBrainsMono',
+                      )),
+                    ],
+                  ),
+                );
+              }),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -250,26 +357,28 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
-class _OnChainMetricsCard extends StatelessWidget {
-  const _OnChainMetricsCard();
+class _OnChainMetricsCard extends ConsumerWidget {
+  final String symbol;
+  const _OnChainMetricsCard({required this.symbol});
 
-  static const _metrics = [
-    _OnChainMetric('SOPR', '1.042', 'Profitable', AppColors.brandGreen,
-      'Spent Output Profit Ratio > 1 means most coins moved are in profit. Bullish.'),
-    _OnChainMetric('MVRV-Z', '2.8', 'Fair Value', AppColors.brandAmber,
-      'Market Value to Realized Value. Below 3.5 = not overheated territory.'),
-    _OnChainMetric('NVT Ratio', '84.2', 'Normal', AppColors.brandBlue,
-      'Network Value to Transactions. Below 100 signals healthy transaction volume.'),
-    _OnChainMetric('Puell Multiple', '1.21', 'Safe Zone', AppColors.brandGreen,
-      'Miner revenue vs annual average. Red zone above 4. Currently healthy.'),
-    _OnChainMetric('STH SOPR', '0.98', 'Slight Loss', AppColors.brandAmber,
-      'Short-term holders in slight loss. Could indicate capitulation before reversal.'),
-    _OnChainMetric('Reserve Risk', '0.0012', 'Opportunity', AppColors.brandGreen,
-      'Low reserve risk suggests confident long-term holders. Historically bullish.'),
-  ];
+  Color _levelColor(String level) {
+    switch (level) {
+      case 'bullish': return AppColors.brandGreen;
+      case 'bearish': return AppColors.brandRed;
+      default: return AppColors.brandAmber;
+    }
+  }
+
+  String _fmtValue(double v) {
+    if (v.abs() < 0.01) return v.toStringAsFixed(6);
+    if (v.abs() < 1) return v.toStringAsFixed(4);
+    if (v.abs() < 10) return v.toStringAsFixed(3);
+    return v.toStringAsFixed(2);
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(onchainIndicatorsProvider(symbol));
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,51 +387,64 @@ class _OnChainMetricsCard extends StatelessWidget {
             fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white,
           )),
           const SizedBox(height: 14),
-          ..._metrics.map((m) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(m.name, style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white,
-                    )),
-                    const Spacer(),
-                    Text(m.value, style: TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700,
-                      color: m.color, fontFamily: 'JetBrainsMono',
-                    )),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: m.color.withAlpha(15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(m.signal, style: TextStyle(
-                        fontSize: 9, fontWeight: FontWeight.w700, color: m.color,
-                      )),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(m.description, style: const TextStyle(
-                  fontSize: 10, color: AppColors.textMuted, height: 1.4,
-                )),
-              ],
+          async.when(
+            loading: () => const SizedBox(
+              height: 60,
+              child: Center(child: CircularProgressIndicator(color: AppColors.brandBlue, strokeWidth: 2)),
             ),
-          )),
+            error: (_, __) => const Text('Unable to load metrics',
+              style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+            data: (indicators) {
+              if (indicators.isEmpty) {
+                return const Text('No indicators available',
+                  style: TextStyle(fontSize: 11, color: AppColors.textMuted));
+              }
+              return Column(
+                children: indicators.map((m) {
+                  final color = _levelColor(m.level);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(m.name, style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white,
+                            )),
+                            const Spacer(),
+                            Text(_fmtValue(m.value), style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700,
+                              color: color, fontFamily: 'JetBrainsMono',
+                            )),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: color.withAlpha(25),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(m.signal, style: TextStyle(
+                                fontSize: 9, fontWeight: FontWeight.w700, color: color,
+                              )),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(m.description, style: const TextStyle(
+                          fontSize: 10, color: AppColors.textMuted, height: 1.4,
+                        )),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
         ],
       ),
     );
   }
-}
-
-class _OnChainMetric {
-  final String name, value, signal, description;
-  final Color color;
-  const _OnChainMetric(this.name, this.value, this.signal, this.color, this.description);
 }
 
 class _WhaleTransactionsList extends StatelessWidget {
@@ -350,7 +472,7 @@ class _WhaleTransactionsList extends StatelessWidget {
                 fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white,
               )),
               const Spacer(),
-              NeonBadge(label: 'LIVE', color: AppColors.brandGreen, icon: Icons.circle),
+              const NeonBadge(label: 'LIVE', color: AppColors.brandGreen, icon: Icons.circle),
             ],
           ),
           const SizedBox(height: 14),

@@ -46,8 +46,10 @@ final sentimentNewsProvider =
 final sentimentSocialProvider =
     FutureProvider.autoDispose<SocialSentimentData>((ref) async {
   final api = ApiClient.instance;
-  final res =
-      await api.get<Map<String, dynamic>>(EndPoints.sentimentSocial);
+  final res = await api.get<Map<String, dynamic>>(
+    EndPoints.sentimentSocial,
+    queryParams: {'symbol': 'BTCUSDT'},
+  );
   final raw = res.data ?? {};
   final inner = raw['data'];
   final payload = inner is Map<String, dynamic> ? inner : raw;

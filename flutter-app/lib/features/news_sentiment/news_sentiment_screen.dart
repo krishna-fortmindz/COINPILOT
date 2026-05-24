@@ -15,8 +15,7 @@ class NewsSentimentScreen extends ConsumerStatefulWidget {
       _NewsSentimentScreenState();
 }
 
-class _NewsSentimentScreenState
-    extends ConsumerState<NewsSentimentScreen>
+class _NewsSentimentScreenState extends ConsumerState<NewsSentimentScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabs;
 
@@ -35,8 +34,7 @@ class _NewsSentimentScreenState
   @override
   Widget build(BuildContext context) {
     final social = ref.watch(sentimentSocialProvider);
-    final overallScore =
-        social.valueOrNull?.overallBullish.round() ?? 0;
+    final overallScore = social.valueOrNull?.overallBullish.round() ?? 0;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -65,8 +63,7 @@ class _NewsSentimentScreenState
 class _Header extends StatelessWidget {
   final TabController tabController;
   final int sentimentScore;
-  const _Header(
-      {required this.tabController, required this.sentimentScore});
+  const _Header({required this.tabController, required this.sentimentScore});
 
   @override
   Widget build(BuildContext context) {
@@ -78,25 +75,49 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Column(
+          LayoutBuilder(
+            builder: (_, constraints) {
+              final meter = _SentimentMeter(value: sentimentScore);
+              if (constraints.maxWidth < 380) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('News & Sentiment',
+                    const Text('News & Sentiment',
                         style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
                             color: Colors.white)),
-                    Text('Real-time market sentiment aggregation',
+                    const Text('Real-time market sentiment aggregation',
                         style: TextStyle(
                             fontSize: 12, color: AppColors.textMuted)),
+                    const SizedBox(height: 10),
+                    meter,
                   ],
-                ),
-              ),
-              _SentimentMeter(value: sentimentScore),
-            ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('News & Sentiment',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white)),
+                        Text('Real-time market sentiment aggregation',
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.textMuted)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  meter,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
           TabBar(
@@ -105,10 +126,10 @@ class _Header extends StatelessWidget {
             tabAlignment: TabAlignment.start,
             labelColor: AppColors.brandGreen,
             unselectedLabelColor: AppColors.textMuted,
-            labelStyle: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600),
-            unselectedLabelStyle: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w400),
+            labelStyle:
+                const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            unselectedLabelStyle:
+                const TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
             indicatorColor: AppColors.brandGreen,
             indicatorSize: TabBarIndicatorSize.label,
             dividerColor: Colors.transparent,
@@ -146,10 +167,10 @@ class _SentimentMeter extends StatelessWidget {
                 ? '—'
                 : 'Bearish';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: color.withAlpha(15),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withAlpha(30)),
       ),
       child: Row(
@@ -157,22 +178,20 @@ class _SentimentMeter extends StatelessWidget {
         children: [
           Text(value > 0 ? '$value' : '—',
               style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: color,
                   fontFamily: 'JetBrainsMono')),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
                   style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: color)),
+                      fontSize: 11, fontWeight: FontWeight.w700, color: color)),
               const Text('Sentiment',
-                  style: TextStyle(
-                      fontSize: 10, color: AppColors.textMuted)),
+                  style: TextStyle(fontSize: 9, color: AppColors.textMuted)),
             ],
           ),
         ],
@@ -239,71 +258,75 @@ class _NewsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _sentimentColor(item.sentiment);
     return GlassCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 4,
-            height: 54,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.title,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SizedBox(
+            width: constraints.maxWidth,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: color, width: 3),
+                ),
+              ),
+              padding: const EdgeInsets.only(left: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
                     style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: Colors.white,
-                        height: 1.4)),
-                if (item.description != null &&
-                    item.description!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(item.description!,
+                        height: 1.4),
+                  ),
+                  if (item.description != null &&
+                      item.description!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      item.description!,
                       style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textMuted,
                           height: 1.4),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                ],
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    _SentimentBadge(
-                        label: item.sentiment, color: color),
-                    const SizedBox(width: 8),
-                    if (item.sentimentScore != null)
-                      Text(
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _SentimentBadge(label: item.sentiment, color: color),
+                      if (item.sentimentScore != null)
+                        Text(
                           '${(item.sentimentScore! * 100).toStringAsFixed(0)}%',
                           style: TextStyle(
                               fontSize: 9,
                               color: color,
-                              fontFamily: 'JetBrainsMono')),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(item.source,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                          style: const TextStyle(
-                              fontSize: 10, color: AppColors.textMuted)),
-                    ),
-                    const Spacer(),
-                    Text(_timeAgo(item.publishedAt),
+                              fontFamily: 'JetBrainsMono'),
+                        ),
+                      Text(
+                        item.source,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                         style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textDisabled)),
-                  ],
-                ),
-              ],
+                            fontSize: 10, color: AppColors.textMuted),
+                      ),
+                      Text(
+                        _timeAgo(item.publishedAt),
+                        style: const TextStyle(
+                            fontSize: 10, color: AppColors.textDisabled),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -323,34 +346,284 @@ class _SocialTab extends ConsumerWidget {
         message: e.toString(),
         onRetry: () => ref.invalidate(sentimentSocialProvider),
       ),
-      data: (data) => RefreshIndicator(
-        color: AppColors.brandGreen,
-        backgroundColor: AppColors.bgSecondary,
-        onRefresh: () async => ref.invalidate(sentimentSocialProvider),
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            if (data.twitter != null) ...[
-              _PlatformSection(
-                platform: 'Twitter / X',
-                icon: Icons.tag_rounded,
-                color: AppColors.brandBlue,
-                data: data.twitter!,
-              ),
-              const SizedBox(height: 16),
+      data: (data) {
+        final hasNewData = data.fearAndGreed != null || data.binanceFutures != null;
+        return RefreshIndicator(
+          color: AppColors.brandGreen,
+          backgroundColor: AppColors.bgSecondary,
+          onRefresh: () async => ref.invalidate(sentimentSocialProvider),
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              if (data.fearAndGreed != null) _FearGreedCard(data: data.fearAndGreed!),
+              if (data.binanceFutures != null) ...[
+                const SizedBox(height: 16),
+                _LongShortCard(data: data.binanceFutures!),
+              ],
+              if (data.twitter != null) ...[
+                const SizedBox(height: 16),
+                _PlatformSection(
+                  platform: 'Twitter / X',
+                  icon: Icons.tag_rounded,
+                  color: AppColors.brandBlue,
+                  data: data.twitter!,
+                ),
+              ],
+              if (data.reddit != null) ...[
+                const SizedBox(height: 16),
+                _PlatformSection(
+                  platform: 'Reddit',
+                  icon: Icons.forum_rounded,
+                  color: AppColors.brandRed,
+                  data: data.reddit!,
+                ),
+              ],
+              if (!hasNewData && data.twitter == null && data.reddit == null)
+                const _EmptyView(message: 'No social data available'),
             ],
-            if (data.reddit != null) ...[
-              _PlatformSection(
-                platform: 'Reddit',
-                icon: Icons.forum_rounded,
-                color: AppColors.brandRed,
-                data: data.reddit!,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FearGreedCard extends StatelessWidget {
+  final FearGreedData data;
+  const _FearGreedCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final value = data.value.clamp(0, 100).toDouble();
+    final color = value >= 60
+        ? AppColors.brandGreen
+        : value >= 45
+            ? AppColors.brandAmber
+            : AppColors.brandRed;
+
+    final tiers = [
+      ('Extreme Fear', 0.0, 25.0),
+      ('Fear', 25.0, 45.0),
+      ('Neutral', 45.0, 55.0),
+      ('Greed', 55.0, 75.0),
+      ('Extreme Greed', 75.0, 100.0),
+    ];
+
+    return GlassCard(
+      borderColor: color.withAlpha(40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Fear & Greed Index',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                    const SizedBox(height: 2),
+                    Text('Alternative.me · Updated daily',
+                        style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(value.toInt().toString(),
+                      style: TextStyle(
+                          fontSize: 36, fontWeight: FontWeight.w900,
+                          color: color, fontFamily: 'JetBrainsMono')),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(20),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: color.withAlpha(40)),
+                    ),
+                    child: Text(data.classification,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+                  ),
+                ],
               ),
             ],
-            if (data.twitter == null && data.reddit == null)
-              const _EmptyView(message: 'No social data available'),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          // Gradient bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Stack(
+              children: [
+                Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        AppColors.brandRed,
+                        AppColors.brandAmber,
+                        AppColors.brandGreen,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                Positioned(
+                  left: (value / 100 * (MediaQuery.of(context).size.width - 80)).clamp(0, double.infinity),
+                  top: 0,
+                  child: Container(
+                    width: 3, height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: const [BoxShadow(color: Colors.white, blurRadius: 4)],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: tiers.map((t) {
+              final (label, lo, hi) = t;
+              final active = value >= lo && (value < hi || (hi == 100 && value == 100));
+              return Text(label,
+                  style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                      color: active ? color : AppColors.textDisabled));
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LongShortCard extends StatelessWidget {
+  final BinanceFuturesData data;
+  const _LongShortCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final longPct = data.longAccount.clamp(0, 100).toDouble();
+    final shortPct = data.shortAccount.clamp(0, 100).toDouble();
+    final isLongDominant = data.isLongDominant;
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Binance Futures L/S',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                    const SizedBox(height: 2),
+                    const Text('Active account long/short ratio',
+                        style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isLongDominant ? AppColors.brandGreen : AppColors.brandRed).withAlpha(20),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: (isLongDominant ? AppColors.brandGreen : AppColors.brandRed).withAlpha(40)),
+                ),
+                child: Text(data.signal,
+                    style: TextStyle(
+                        fontSize: 10, fontWeight: FontWeight.w700,
+                        color: isLongDominant ? AppColors.brandGreen : AppColors.brandRed)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Long', style: TextStyle(fontSize: 11, color: AppColors.brandGreen)),
+                        Text('${longPct.toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w800,
+                                color: AppColors.brandGreen, fontFamily: 'JetBrainsMono')),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: longPct / 100,
+                        backgroundColor: AppColors.bgCard,
+                        valueColor: const AlwaysStoppedAnimation(AppColors.brandGreen),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Short', style: TextStyle(fontSize: 11, color: AppColors.brandRed)),
+                        Text('${shortPct.toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w800,
+                                color: AppColors.brandRed, fontFamily: 'JetBrainsMono')),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: shortPct / 100,
+                        backgroundColor: AppColors.bgCard,
+                        valueColor: const AlwaysStoppedAnimation(AppColors.brandRed),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.bgTertiary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Long/Short Ratio',
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                Text(data.longShortRatio.toStringAsFixed(4),
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700,
+                        color: isLongDominant ? AppColors.brandGreen : AppColors.brandRed,
+                        fontFamily: 'JetBrainsMono')),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -436,22 +709,16 @@ class _PlatformSection extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      flex: data.bullishPercent.round(),
-                      child: Container(
-                          height: 6,
-                          color: AppColors.brandGreen),
+                      flex: data.bullishPercent.round().clamp(1, 100),
+                      child: Container(height: 6, color: AppColors.brandGreen),
                     ),
                     Expanded(
-                      flex: data.neutralPercent.round(),
-                      child: Container(
-                          height: 6,
-                          color: AppColors.brandAmber),
+                      flex: data.neutralPercent.round().clamp(1, 100),
+                      child: Container(height: 6, color: AppColors.brandAmber),
                     ),
                     Expanded(
                       flex: data.bearishPercent.round().clamp(1, 100),
-                      child: Container(
-                          height: 6,
-                          color: AppColors.brandRed),
+                      child: Container(height: 6, color: AppColors.brandRed),
                     ),
                   ],
                 ),
@@ -502,8 +769,8 @@ class _SocialMetric extends StatelessWidget {
                     color: color,
                     fontFamily: 'JetBrainsMono')),
             Text(label,
-                style: const TextStyle(
-                    fontSize: 9, color: AppColors.textMuted)),
+                style:
+                    const TextStyle(fontSize: 9, color: AppColors.textMuted)),
           ],
         ),
       ),
@@ -514,8 +781,7 @@ class _SocialMetric extends StatelessWidget {
 class _SocialPostCard extends StatelessWidget {
   final SocialPost post;
   final Color platformColor;
-  const _SocialPostCard(
-      {required this.post, required this.platformColor});
+  const _SocialPostCard({required this.post, required this.platformColor});
 
   String _timeAgo(DateTime? dt) {
     if (dt == null) return '';
@@ -543,9 +809,7 @@ class _SocialPostCard extends StatelessWidget {
                 radius: 13,
                 backgroundColor: platformColor.withAlpha(20),
                 child: Text(
-                  post.author.isNotEmpty
-                      ? post.author[0].toUpperCase()
-                      : '?',
+                  post.author.isNotEmpty ? post.author[0].toUpperCase() : '?',
                   style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
@@ -573,9 +837,7 @@ class _SocialPostCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(post.content,
               style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textMuted,
-                  height: 1.5),
+                  fontSize: 12, color: AppColors.textMuted, height: 1.5),
               maxLines: 3,
               overflow: TextOverflow.ellipsis),
           if (post.likes != null || post.comments != null) ...[
@@ -641,13 +903,12 @@ class _CoinSignalsTab extends ConsumerWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: GestureDetector(
-                  onTap: () => ref
-                      .read(sentimentCoinIdProvider.notifier)
-                      .state = id,
+                  onTap: () =>
+                      ref.read(sentimentCoinIdProvider.notifier).state = id,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
                       color: active
                           ? AppColors.brandGreen.withAlpha(25)
@@ -678,8 +939,7 @@ class _CoinSignalsTab extends ConsumerWidget {
             loading: () => const _LoadingView(),
             error: (e, _) => _ErrorView(
               message: e.toString(),
-              onRetry: () =>
-                  ref.invalidate(coinSentimentProvider(selectedId)),
+              onRetry: () => ref.invalidate(coinSentimentProvider(selectedId)),
             ),
             data: (d) => RefreshIndicator(
               color: AppColors.brandGreen,
@@ -702,8 +962,7 @@ class _CoinSignalsTab extends ConsumerWidget {
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white)),
                           const SizedBox(height: 14),
-                          ...d.signals.map((s) =>
-                              _SignalRow(signal: s)),
+                          ...d.signals.map((s) => _SignalRow(signal: s)),
                         ],
                       ),
                     ),
@@ -733,43 +992,62 @@ class _CoinOverallCard extends StatelessWidget {
 
     return GlassCard(
       borderColor: color.withAlpha(40),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data.symbol.isNotEmpty
-                      ? '${data.symbol}/USDT'
-                      : data.coinId,
-                  style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                const Text('Overall Sentiment',
-                    style: TextStyle(
-                        fontSize: 11, color: AppColors.textMuted)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
-              Text(
-                data.overallScore.toStringAsFixed(0),
-                style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: color,
-                    fontFamily: 'JetBrainsMono'),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.symbol.isNotEmpty ? '${data.symbol}/USDT' : data.coinId,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('Overall Sentiment',
+                        style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                  ],
+                ),
               ),
-              _SentimentBadge(
-                  label: data.overallSentiment, color: color),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    data.overallScore.toStringAsFixed(0),
+                    style: TextStyle(
+                        fontSize: 32, fontWeight: FontWeight.w900,
+                        color: color, fontFamily: 'JetBrainsMono'),
+                  ),
+                  _SentimentBadge(label: data.overallSentiment, color: color),
+                ],
+              ),
             ],
           ),
+          if (data.aiSummary != null && data.aiSummary!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(color: AppColors.borderSubtle, height: 1),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 24, height: 24,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandAmber.withAlpha(20),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(Icons.psychology_rounded, size: 13, color: AppColors.brandAmber),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(data.aiSummary!,
+                      style: const TextStyle(fontSize: 11, color: AppColors.textMuted, height: 1.5)),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -839,16 +1117,14 @@ class _SignalRow extends StatelessWidget {
                             color: Colors.white)),
                     const Spacer(),
                     if (signal.confidence != null)
-                      Text(
-                          '${signal.confidence!.toStringAsFixed(0)}%',
+                      Text('${signal.confidence!.toStringAsFixed(0)}%',
                           style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: color,
                               fontFamily: 'JetBrainsMono')),
                     const SizedBox(width: 6),
-                    _SentimentBadge(
-                        label: signal.signal, color: color),
+                    _SentimentBadge(label: signal.signal, color: color),
                   ],
                 ),
                 if (signal.description != null) ...[
@@ -902,9 +1178,7 @@ class _OnChainTab extends ConsumerWidget {
             ],
             if (d.indicators.isNotEmpty)
               _IndicatorsCard(indicators: d.indicators),
-            if (d.flows == null &&
-                d.indicators.isEmpty &&
-                d.aiSummary == null)
+            if (d.flows == null && d.indicators.isEmpty && d.aiSummary == null)
               const _EmptyView(message: 'No on-chain data available'),
           ],
         ),
@@ -950,9 +1224,7 @@ class _ExchangeFlowsCard extends StatelessWidget {
                 'Net Flow',
                 '${netPositive ? '+' : ''}${_formatFlow(flows.netFlow)}',
                 netPositive ? AppColors.brandRed : AppColors.brandGreen,
-                netPositive
-                    ? Icons.warning_rounded
-                    : Icons.trending_up_rounded,
+                netPositive ? Icons.warning_rounded : Icons.trending_up_rounded,
               ),
             ],
           ),
@@ -961,8 +1233,7 @@ class _ExchangeFlowsCard extends StatelessWidget {
             Row(
               children: [
                 const Text('Exchange Reserve',
-                    style: TextStyle(
-                        fontSize: 11, color: AppColors.textMuted)),
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 const Spacer(),
                 Text(_formatFlow(flows.reserve!),
                     style: const TextStyle(
@@ -977,25 +1248,20 @@ class _ExchangeFlowsCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: (netPositive
-                      ? AppColors.brandRed
-                      : AppColors.brandGreen)
+              color: (netPositive ? AppColors.brandRed : AppColors.brandGreen)
                   .withAlpha(10),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                  color: (netPositive
-                          ? AppColors.brandRed
-                          : AppColors.brandGreen)
-                      .withAlpha(25)),
+                  color:
+                      (netPositive ? AppColors.brandRed : AppColors.brandGreen)
+                          .withAlpha(25)),
             ),
             child: Text(
               netPositive
                   ? 'Net inflow to exchanges — potential sell pressure. Monitor support levels.'
                   : 'Net outflow from exchanges — coins moving to cold storage. Bullish signal.',
               style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textMuted,
-                  height: 1.4),
+                  fontSize: 11, color: AppColors.textMuted, height: 1.4),
             ),
           ),
         ],
@@ -1039,8 +1305,7 @@ class _FlowMetric extends StatelessWidget {
                     fontFamily: 'JetBrainsMono'),
                 textAlign: TextAlign.center),
             Text(label,
-                style: const TextStyle(
-                    fontSize: 9, color: AppColors.textMuted),
+                style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
                 textAlign: TextAlign.center),
           ],
         ),
@@ -1074,9 +1339,7 @@ class _AiSummaryCard extends StatelessWidget {
           Expanded(
             child: Text(text,
                 style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textMuted,
-                    height: 1.5)),
+                    fontSize: 12, color: AppColors.textMuted, height: 1.5)),
           ),
         ],
       ),
@@ -1183,6 +1446,9 @@ class _SentimentBadge extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: color,
             letterSpacing: 0.5),
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        softWrap: false,
       ),
     );
   }
@@ -1215,8 +1481,7 @@ class _ErrorView extends StatelessWidget {
               color: AppColors.textMuted, size: 40),
           const SizedBox(height: 8),
           Text(message,
-              style: const TextStyle(
-                  fontSize: 12, color: AppColors.textMuted),
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
               textAlign: TextAlign.center),
           const SizedBox(height: 12),
           TextButton(
@@ -1238,8 +1503,7 @@ class _EmptyView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(message,
-          style: const TextStyle(
-              fontSize: 13, color: AppColors.textMuted)),
+          style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
     );
   }
 }

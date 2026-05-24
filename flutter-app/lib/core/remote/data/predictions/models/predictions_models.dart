@@ -1,3 +1,61 @@
+// ── CoinId → display name / symbol lookup ─────────────────────────────────────
+
+const _coinNames = <String, String>{
+  'bitcoin': 'Bitcoin',
+  'ethereum': 'Ethereum',
+  'solana': 'Solana',
+  'binancecoin': 'BNB',
+  'ripple': 'XRP',
+  'cardano': 'Cardano',
+  'avalanche-2': 'Avalanche',
+  'dogecoin': 'Dogecoin',
+  'polkadot': 'Polkadot',
+  'chainlink': 'Chainlink',
+  'matic-network': 'Polygon',
+  'shiba-inu': 'Shiba Inu',
+  'tron': 'TRON',
+  'litecoin': 'Litecoin',
+  'uniswap': 'Uniswap',
+  'arbitrum': 'Arbitrum',
+  'optimism': 'Optimism',
+  'near': 'NEAR',
+  'aptos': 'Aptos',
+  'sui': 'Sui',
+};
+
+const _coinSymbols = <String, String>{
+  'bitcoin': 'BTC',
+  'ethereum': 'ETH',
+  'solana': 'SOL',
+  'binancecoin': 'BNB',
+  'ripple': 'XRP',
+  'cardano': 'ADA',
+  'avalanche-2': 'AVAX',
+  'dogecoin': 'DOGE',
+  'polkadot': 'DOT',
+  'chainlink': 'LINK',
+  'matic-network': 'MATIC',
+  'shiba-inu': 'SHIB',
+  'tron': 'TRX',
+  'litecoin': 'LTC',
+  'uniswap': 'UNI',
+  'arbitrum': 'ARB',
+  'optimism': 'OP',
+  'near': 'NEAR',
+  'aptos': 'APT',
+  'sui': 'SUI',
+};
+
+String _nameFromCoinId(String coinId) =>
+    _coinNames[coinId] ??
+    coinId
+        .split('-')
+        .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
+
+String _symbolFromCoinId(String coinId) =>
+    _coinSymbols[coinId] ?? coinId.toUpperCase().split('-').first;
+
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
 class LeaderboardEntry {
@@ -23,21 +81,47 @@ class LeaderboardEntry {
     required this.period,
   });
 
-  factory LeaderboardEntry.fromJson(Map<String, dynamic> j) => LeaderboardEntry(
-        rank: (j['rank'] as num?)?.toInt() ?? 0,
-        coinId: j['coinId']?.toString() ?? j['coin_id']?.toString() ?? '',
-        symbol: j['symbol']?.toString() ?? '',
-        name: j['name']?.toString() ?? j['symbol']?.toString() ?? '',
-        imageUrl: j['imageUrl']?.toString() ?? j['image']?.toString(),
-        accuracy: (j['accuracy'] as num?)?.toDouble() ?? 0,
-        totalPredictions:
-            (j['totalPredictions'] as num?)?.toInt() ??
-            (j['total'] as num?)?.toInt() ?? 0,
-        correctPredictions:
-            (j['correctPredictions'] as num?)?.toInt() ??
-            (j['correct'] as num?)?.toInt() ?? 0,
-        period: j['period']?.toString() ?? '30d',
-      );
+  // [rankOverride] is passed from the repo when the backend omits rank
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> j,
+      {int rankOverride = 0}) {
+    final coinId =
+        j['coinId']?.toString() ?? j['coin_id']?.toString() ?? j['id']?.toString() ?? '';
+
+    // Backend doesn't always return name/symbol — derive from coinId
+    final symbol = j['symbol']?.toString().isNotEmpty == true
+        ? j['symbol'].toString()
+        : _symbolFromCoinId(coinId);
+    final name = j['name']?.toString().isNotEmpty == true
+        ? j['name'].toString()
+        : _nameFromCoinId(coinId);
+
+    final rank = (j['rank'] as num?)?.toInt() ??
+        (j['position'] as num?)?.toInt() ??
+        rankOverride;
+
+    return LeaderboardEntry(
+      rank: rank,
+      coinId: coinId,
+      symbol: symbol,
+      name: name,
+      imageUrl: j['imageUrl']?.toString() ??
+          j['image']?.toString() ??
+          j['logo']?.toString(),
+      accuracy: (j['accuracyRate'] as num?)?.toDouble() ??
+          (j['accuracy'] as num?)?.toDouble() ??
+          (j['winRate'] as num?)?.toDouble() ??
+          0,
+      totalPredictions: (j['totalPredictions'] as num?)?.toInt() ??
+          (j['total'] as num?)?.toInt() ??
+          0,
+      correctPredictions: (j['correctPredictions'] as num?)?.toInt() ??
+          (j['correct'] as num?)?.toInt() ??
+          0,
+      period: j['timeframe']?.toString() ??
+          j['period']?.toString() ??
+          '30d',
+    );
+  }
 
   String get formattedAccuracy => '${accuracy.toStringAsFixed(1)}%';
 
@@ -71,14 +155,15 @@ class CoinAccuracy {
   factory CoinAccuracy.fromJson(Map<String, dynamic> j) => CoinAccuracy(
         coinId: j['coinId']?.toString() ?? j['coin_id']?.toString() ?? '',
         symbol: j['symbol']?.toString() ?? '',
-        accuracy: (j['accuracy'] as num?)?.toDouble() ?? 0,
+        accuracy: (j['accuracyRate'] as num?)?.toDouble() ??
+            (j['accuracy'] as num?)?.toDouble() ?? 0,
         totalPredictions:
             (j['totalPredictions'] as num?)?.toInt() ??
             (j['total'] as num?)?.toInt() ?? 0,
         correctPredictions:
             (j['correctPredictions'] as num?)?.toInt() ??
             (j['correct'] as num?)?.toInt() ?? 0,
-        period: j['period']?.toString() ?? '30d',
+        period: j['timeframe']?.toString() ?? j['period']?.toString() ?? '30d',
       );
 
   String get formattedAccuracy => '${accuracy.toStringAsFixed(1)}%';
