@@ -6,6 +6,7 @@ import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/coin_selector.dart';
 import '../../core/remote/data/trade_now/models/trade_now_models.dart';
 import '../../providers/trade_now_provider.dart';
+import '../../providers/dashboard_provider.dart';
 
 class TradeNowScreen extends ConsumerStatefulWidget {
   const TradeNowScreen({super.key});
@@ -29,6 +30,11 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(tradeNowProvider(_selectedCoin));
+    final tickerAsync = ref.watch(tickerProvider);
+    final livePrice = tickerAsync.maybeWhen(
+      data: (map) => map['${_selectedCoin}USDT']?.close,
+      orElse: () => null,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -50,7 +56,7 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
                   async.when(
                     loading: _buildShimmer,
                     error: (e, _) => _buildError(),
-                    data: _buildContent,
+                    data: (data) => _buildContent(data, livePrice),
                   ),
                   const SizedBox(height: 40),
                 ],
@@ -62,11 +68,11 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
     );
   }
 
-  Widget _buildContent(TradeNowData data) {
+  Widget _buildContent(TradeNowData data, double? livePrice) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildVerdictCard(data.signal),
+        _buildVerdictCard(data.signal, livePrice),
         const SizedBox(height: 16),
         LayoutBuilder(builder: (_, c) {
           if (c.maxWidth < 700) {
@@ -125,8 +131,13 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
     );
   }
 
-  Widget _buildVerdictCard(SignalData s) {
+  Widget _buildVerdictCard(SignalData s, double? livePrice) {
     final color = _verdictColor(s.verdictType);
+    final displayPrice = livePrice != null
+        ? (livePrice >= 1000
+            ? '\$${livePrice.toStringAsFixed(0)}'
+            : '\$${livePrice.toStringAsFixed(4)}')
+        : s.formattedPrice;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -149,6 +160,14 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
                         fontSize: 16, fontWeight: FontWeight.w800, color: color,
                       )),
                     ),
+                    if (livePrice != null)
+                      Container(
+                        width: 6, height: 6,
+                        decoration: const BoxDecoration(
+                          color: AppColors.brandGreen,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -157,9 +176,10 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
                     Text('$_selectedCoin/USDT ', style: const TextStyle(
                       fontSize: 13, color: AppColors.textMuted,
                     )),
-                    Text(s.formattedPrice, style: const TextStyle(
+                    Text(displayPrice, style: TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w700,
-                      color: Colors.white, fontFamily: 'JetBrainsMono',
+                      color: livePrice != null ? AppColors.brandGreen : Colors.white,
+                      fontFamily: 'JetBrainsMono',
                     )),
                   ],
                 ),
@@ -243,6 +263,9 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
   }
 
   Widget _buildLevelsCard(SignalData s) {
+    final showNoLevelsNotice = s.entry == '—' ||
+        s.entry.contains('0–') ||
+        s.entry.contains('0.00');
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,6 +274,28 @@ class _TradeNowScreenState extends ConsumerState<TradeNowScreen> {
             fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white,
           )),
           const SizedBox(height: 16),
+          if (showNoLevelsNotice)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.brandAmber.withAlpha(15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.brandAmber.withAlpha(40)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 12, color: AppColors.brandAmber),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Trade levels not available for this coin. Try BTC, ETH, SOL, BNB, or XRP.',
+                      style: TextStyle(fontSize: 11, color: AppColors.brandAmber, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _LevelRow('Entry Zone', s.entry, AppColors.brandBlue),
           const SizedBox(height: 10),
           _LevelRow('Take Profit', s.takeProfit, AppColors.brandGreen),

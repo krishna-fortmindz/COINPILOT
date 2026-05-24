@@ -47,7 +47,7 @@ class _BottomNav extends StatelessWidget {
   static const _moreRoutes = {
     '/analysis', '/memory', '/sentiment', '/listings',
     '/onchain', '/token-unlocks', '/portfolio',
-    '/risk', '/journal', '/chat', '/alerts', '/profile',
+    '/risk', '/journal', '/chat', '/profile', '/predictions',
   };
 
   bool get _moreActive => _moreRoutes.contains(currentRoute);
@@ -75,7 +75,7 @@ class _BottomNav extends StatelessWidget {
               final active = currentRoute == item.route;
               return Expanded(
                 child: GestureDetector(
-                  onTap: () => context.go(item.route),
+                  onTap: () => Router.neglect(context, () => context.go(item.route)),
                   behavior: HitTestBehavior.opaque,
                   child: _NavTab(icon: item.icon, label: item.label, active: active),
                 ),
@@ -150,6 +150,7 @@ class _MoreSheet extends StatelessWidget {
       _MoreEntry('/analysis', Icons.psychology_rounded, 'AI Analysis', AppColors.brandPurple),
       _MoreEntry('/memory', Icons.history_edu_rounded, 'Market Memory', AppColors.brandBlue),
       _MoreEntry('/chat', Icons.chat_bubble_outline_rounded, 'AI Chat', AppColors.brandGreen),
+      _MoreEntry('/predictions', Icons.leaderboard_rounded, 'AI Accuracy', AppColors.brandAmber),
     ]),
     _MoreSection('MARKET', [
       _MoreEntry('/sentiment', Icons.sentiment_satisfied_rounded, 'Sentiment', AppColors.brandAmber),
@@ -164,7 +165,6 @@ class _MoreSheet extends StatelessWidget {
       _MoreEntry('/portfolio', Icons.pie_chart_rounded, 'Portfolio', AppColors.brandPurple),
       _MoreEntry('/risk', Icons.shield_rounded, 'Risk Manager', AppColors.brandRed),
       _MoreEntry('/journal', Icons.book_rounded, 'Trade Journal', AppColors.brandBlue),
-      _MoreEntry('/alerts', Icons.notifications_rounded, 'Alerts', AppColors.brandAmber),
     ]),
     _MoreSection('ACCOUNT', [
       _MoreEntry('/profile', Icons.person_rounded, 'Profile', AppColors.textMuted),
@@ -216,10 +216,10 @@ class _MoreSheet extends StatelessWidget {
                       children: section.entries.map((e) {
                         final active = currentRoute == e.route;
                         return GestureDetector(
-                          onTap: () {
+                          onTap: () => Router.neglect(context, () {
                             Navigator.of(context).pop();
                             context.go(e.route);
-                          },
+                          }),
                           child: Container(
                             decoration: BoxDecoration(
                               color: active

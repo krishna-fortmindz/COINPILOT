@@ -5,7 +5,9 @@ class EndPoints {
   // Backend Base URLs
   // ─────────────────────────────────────────────────────────────
 
-  static const String baseUrl = 'https://had-pampers-haste.ngrok-free.dev';
+  static const String baseUrl = 'http://10.24.227.45:5000';
+  // static const String baseUrl = 'https://crypto-backend-4557.onrender.com';
+
   static const String apiBaseUrl = '$baseUrl/api/v1';
   static const String dashboardBaseUrl = '$apiBaseUrl/dashboard';
   static const String aiBaseUrl = '$baseUrl/api/ai';
@@ -49,12 +51,86 @@ class EndPoints {
   // Trade Now — AI Analysis APIs
   // ─────────────────────────────────────────────────────────────
 
-  static const String analysisSignal       = '$apiBaseUrl/analysis/signal';
-  static const String analysisSentiment    = '$apiBaseUrl/analysis/sentiment';
-  static const String analysisOpenInterest = '$apiBaseUrl/analysis/open-interest';
-  static const String analysisLongShort    = '$apiBaseUrl/analysis/long-short';
-  static const String analysisLiquidations = '$apiBaseUrl/analysis/liquidations';
-  static const String analysisHistory      = '$apiBaseUrl/analysis/history';
+  // Trade Now
+  static const String analysisSignal = '$apiBaseUrl/analysis/signal';
+  static const String analysisSentiment = '$apiBaseUrl/analysis/sentiment';
+  static const String analysisOpenInterest =
+      '$apiBaseUrl/analysis/open-interest';
+  static const String analysisLongShort = '$apiBaseUrl/analysis/long-short';
+  static const String analysisLiquidations =
+      '$apiBaseUrl/analysis/liquidations';
+  static const String analysisHistory = '$apiBaseUrl/analysis/history';
+
+  // Order Book
+  static const String analysisLevels = '$apiBaseUrl/analysis/levels';
+
+  // Charts — indicators & pattern overlay (NEW — backend to build)
+  static const String analysisIndicators = '$apiBaseUrl/analysis/indicators';
+  static const String analysisPatterns = '$apiBaseUrl/analysis/patterns';
+
+  // ─────────────────────────────────────────────────────────────
+  // New Listings (NEW — backend to build)
+  // GET ?page=1&limit=20
+  // ─────────────────────────────────────────────────────────────
+  static const String newListings = '$dashboardBaseUrl/new-listings';
+
+  // GET ?coinId=bitcoin
+  static const String newListingsAiScore = '$aiBaseUrl/listings/score';
+
+  // ─────────────────────────────────────────────────────────────
+  // On-chain / Sentiment (NEW — backend to build)
+  // ─────────────────────────────────────────────────────────────
+  static const String sentimentNews = '$baseUrl/api/sentiment/news';
+  static const String sentimentSocial = '$baseUrl/api/sentiment/social';
+  static String sentimentCoin(String coinId) =>
+      '$baseUrl/api/sentiment/coins/$coinId';
+  static const String sentimentOnChain = '$baseUrl/api/sentiment/on-chain';
+  static const String onchainIndicators = '$apiBaseUrl/onchain/indicators';
+
+  // ─────────────────────────────────────────────────────────────
+  // Portfolio (NEW — backend to build)
+  // ─────────────────────────────────────────────────────────────
+  static const String portfolio = '$apiBaseUrl/portfolio';
+  static const String portfolioHoldings = '$apiBaseUrl/portfolio/holdings';
+  static const String portfolioPerformance =
+      '$apiBaseUrl/portfolio/performance';
+
+  // ─────────────────────────────────────────────────────────────
+  // Alerts (NEW — backend to build)
+  // ─────────────────────────────────────────────────────────────
+  static const String alerts = '$apiBaseUrl/alerts';
+  static const String alertsHistory = '$apiBaseUrl/alerts/history';
+
+  // ─────────────────────────────────────────────────────────────
+  // Trade Journal (NEW — backend to build)
+  // ─────────────────────────────────────────────────────────────
+  static const String journal = '$baseUrl/api/journal';
+  static const String journalStats = '$baseUrl/api/journal/stats';
+
+  // ─────────────────────────────────────────────────────────────
+  // AI Chat (NEW — backend to build)
+  // ─────────────────────────────────────────────────────────────
+  static const String aiChat = '$apiBaseUrl/ai/chat';
+  static const String aiChatHistory = '$apiBaseUrl/ai/chat/history';
+
+  // ─────────────────────────────────────────────────────────────
+  // Predictions
+  // ─────────────────────────────────────────────────────────────
+  static const String predictionsLeaderboard =
+      '$apiBaseUrl/predictions/leaderboard';
+  static const String predictionsUser = '$apiBaseUrl/predictions/user';
+  static const String predictionsUserMine = '$apiBaseUrl/predictions/user/mine';
+  static const String predictionsUserVsAi =
+      '$apiBaseUrl/predictions/user/vs-ai';
+
+  static String predictionAccuracy(String coinId) =>
+      '$apiBaseUrl/predictions/$coinId/accuracy';
+
+  static String predictionHistory(String coinId) =>
+      '$apiBaseUrl/predictions/$coinId/history';
+
+  static String predictionPostMortems(String coinId) =>
+      '$apiBaseUrl/predictions/$coinId/post-mortems';
 
   // ─────────────────────────────────────────────────────────────
   // Dynamic Dashboard APIs
@@ -204,4 +280,38 @@ class EndPoints {
       },
     ).toString();
   }
+
+  static String newListingsWithParams({int page = 1, int limit = 20}) {
+    return Uri.parse(newListings).replace(
+      queryParameters: {'page': '$page', 'limit': '$limit'},
+    ).toString();
+  }
+
+  static String analysisIndicatorsWithParams({
+    required String symbol,
+    required String type,
+    String interval = '1h',
+  }) {
+    return Uri.parse(analysisIndicators).replace(
+      queryParameters: {'symbol': symbol, 'type': type, 'interval': interval},
+    ).toString();
+  }
+
+  static String journalEntry(String id) => '$journal/$id';
+
+  static String alertEntry(String id) => '$alerts/$id';
+
+  static String portfolioHolding(String id) => '$portfolioHoldings/$id';
+
+  // ─────────────────────────────────────────────────────────────
+  // Risk Management
+  // ─────────────────────────────────────────────────────────────
+  static const String riskPositionSize = '$baseUrl/api/risk/position-size';
+  static const String riskRrCalculator = '$baseUrl/api/risk/rr-calculator';
+  static String riskMaxDrawdown({
+    String symbol = 'BTCUSDT',
+    String period = '30d',
+    String interval = '1d',
+  }) =>
+      '$baseUrl/api/risk/max-drawdown?symbol=$symbol&period=$period&interval=$interval';
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../../providers/dashboard_provider.dart';
+import '../remote/data/dashboard/models/dashboard_models.dart';
 
 class CoinMeta {
   final String symbol, name, price, change;
@@ -160,8 +161,10 @@ const kAllCoins = [
       color: Color(0xFF0088CC)),
 ];
 
-CoinMeta coinBySymbol(String symbol) => kAllCoins
-    .firstWhere((c) => c.symbol == symbol, orElse: () => kAllCoins.first);
+CoinMeta coinBySymbol(String symbol) => kAllCoins.firstWhere(
+      (c) => c.symbol.toUpperCase() == symbol.toUpperCase(),
+      orElse: () => kAllCoins.first,
+    );
 
 Color _colorForSymbol(String symbol) {
   const colorMap = {
@@ -237,7 +240,25 @@ class CoinSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Always show correct static coin immediately — no "Loading..." flicker
+    final staticCoin = coinBySymbol(selected);
     final coinsAsync = ref.watch(coinSearchProvider(selected));
+
+    Widget staticRow() => _SelectorRow(
+          symbol: staticCoin.symbol,
+          name: staticCoin.name,
+          priceWidget: Text(
+            staticCoin.price,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              fontFamily: 'JetBrainsMono',
+            ),
+          ),
+          changeWidget: _changeBadge(staticCoin.change, staticCoin.positive),
+        );
 
     return GestureDetector(
       onTap: () => _openSearch(context),
@@ -249,53 +270,17 @@ class CoinSelector extends ConsumerWidget {
           border: Border.all(color: AppColors.borderSubtle),
         ),
         child: coinsAsync.when(
-          loading: () => _SelectorRow(
-            symbol: selected,
-            name: 'Loading...',
-            priceWidget: const SizedBox.shrink(),
-            changeWidget: const SizedBox.shrink(),
-          ),
-          error: (_, __) {
-            final coin = coinBySymbol(selected);
-            return _SelectorRow(
-              symbol: coin.symbol,
-              name: coin.name,
-              priceWidget: Text(
-                coin.price,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  fontFamily: 'JetBrainsMono',
-                ),
-              ),
-              changeWidget: _changeBadge(coin.change, coin.positive),
-            );
-          },
+          // Show static data immediately — selector looks correct the moment coin changes
+          loading: () => staticRow(),
+          error: (_, __) => staticRow(),
           data: (coins) {
-            if (coins.isEmpty) {
-              final coin = coinBySymbol(selected);
-              return _SelectorRow(
-                symbol: coin.symbol,
-                name: coin.name,
-                priceWidget: Text(
-                  coin.price,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    fontFamily: 'JetBrainsMono',
-                  ),
-                ),
-                changeWidget: _changeBadge(coin.change, coin.positive),
-              );
-            }
-            final mc = coins.firstWhere(
-              (c) => c.symbol.toUpperCase() == selected.toUpperCase(),
-              orElse: () => coins.first,
-            );
+            // Find exact symbol match; if not found fall back to static (never wrong coin)
+            final mc = coins.cast<MarketCoin?>().firstWhere(
+                  (c) => c!.symbol.toUpperCase() == selected.toUpperCase(),
+                  orElse: () => null,
+                );
+            if (mc == null) return staticRow();
+
             final changeStr =
                 '${mc.priceChange24h >= 0 ? '+' : ''}${mc.priceChange24h.toStringAsFixed(2)}%';
             return _SelectorRow(
@@ -363,44 +348,32 @@ class _SelectorRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.max,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Avatar — fixed width
         _coinAvatar(symbol),
         const SizedBox(width: 10),
-
-        // Symbol + name — takes remaining space, pushes price to right
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                symbol,
-                style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white),
-              ),
-              Text(
-                name,
-                style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              symbol,
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white),
+            ),
+            Text(
+              name,
+              style: const TextStyle(fontSize: 9, color: AppColors.textMuted),
+            ),
+          ],
         ),
         const SizedBox(width: 12),
-
-        // Price — shrink-wraps, no overflow fighting
         priceWidget,
         const SizedBox(width: 8),
-
-        // Change badge — shrink-wraps
         changeWidget,
         const SizedBox(width: 10),
-
-        // Arrow — fixed, always at the end
         const Icon(Icons.keyboard_arrow_down_rounded,
             color: AppColors.textMuted, size: 18),
       ],
