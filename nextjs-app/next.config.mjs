@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion"],
+    serverComponentsExternalPackages: ["socket.io-client", "engine.io-client"],
   },
 
   images: {
@@ -14,41 +14,40 @@ const nextConfig = {
   },
 
   async rewrites() {
+    // In dev: proxy /app/* to local Flutter dev server
+    if (process.env.NODE_ENV !== "production") {
+      return [
+        {
+          source: "/app/:path*",
+          destination: "http://localhost:5001/app/:path*",
+        },
+        {
+          source: "/dashboard/:path*",
+          destination: "http://localhost:5001/dashboard/:path*",
+        },
+        {
+          source: "/analysis/:path*",
+          destination: "http://localhost:5001/analysis/:path*",
+        },
+        {
+          source: "/charts/:path*",
+          destination: "http://localhost:5001/charts/:path*",
+        },
+        {
+          source: "/chat/:path*",
+          destination: "http://localhost:5001/chat/:path*",
+        },
+      ];
+    }
+
+    // In production: Flutter is embedded in public/app/ as static files.
+    // Only rewrite /app and /app/ to serve Flutter's index.html.
+    // All other /app/* requests (JS, WASM, assets) are served directly
+    // from public/app/ by Next.js static file serving.
     return [
-      {
-        source: "/dashboard/:path*",
-        destination: process.env.FLUTTER_APP_URL
-          ? `${process.env.FLUTTER_APP_URL}/dashboard/:path*`
-          : "http://localhost:5001/dashboard/:path*",
-      },
-
-      {
-        source: "/app/:path*",
-        destination: process.env.FLUTTER_APP_URL
-          ? `${process.env.FLUTTER_APP_URL}/app/:path*`
-          : "http://localhost:5001/app/:path*",
-      },
-
-      {
-        source: "/analysis/:path*",
-        destination: process.env.FLUTTER_APP_URL
-          ? `${process.env.FLUTTER_APP_URL}/analysis/:path*`
-          : "http://localhost:5001/analysis/:path*",
-      },
-
-      {
-        source: "/charts/:path*",
-        destination: process.env.FLUTTER_APP_URL
-          ? `${process.env.FLUTTER_APP_URL}/charts/:path*`
-          : "http://localhost:5001/charts/:path*",
-      },
-
-      {
-        source: "/chat/:path*",
-        destination: process.env.FLUTTER_APP_URL
-          ? `${process.env.FLUTTER_APP_URL}/chat/:path*`
-          : "http://localhost:5001/chat/:path*",
-      },
+      { source: "/app", destination: "/app/index.html" },
+      { source: "/app/", destination: "/app/index.html" },
+      { source: "/app/:path*", destination: "/app/index.html" },
     ];
   },
 
