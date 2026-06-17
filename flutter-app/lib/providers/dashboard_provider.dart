@@ -48,6 +48,11 @@ final fundingRatesProvider = FutureProvider<List<FundingRate>>(
   (_) => _repo.fetchFundingRates(),
 );
 
+final allFundingRatesProvider = FutureProvider<List<FundingRate>>(
+  (_) => _repo.fetchAllFundingRates(),
+);
+
+
 // Coin search provider — parameterized by query string
 final coinSearchProvider =
     FutureProvider.family<List<MarketCoin>, String>((ref, query) {

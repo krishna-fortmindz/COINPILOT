@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { setTokens } from "@/lib/auth";
@@ -11,6 +11,16 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [toast, setToast] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = () => {
+    setToast(true);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(false), 3000);
+  };
+
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +55,7 @@ export default function LoginForm() {
       }
       const base = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
       // replace() removes login from history so back-button goes to landing, not login
-      window.location.replace(`${base}/dashboard`);
+      window.location.replace(base === "http://localhost:8080" ? `${base}/dashboard` : "/app/");
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
@@ -54,9 +64,19 @@ export default function LoginForm() {
 
   return (
     <div className="space-y-5">
+      {/* Toast */}
+      <div
+        className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-xs font-medium text-white border border-white/10 bg-[#1a1c24] shadow-xl transition-all duration-300 pointer-events-none ${
+          toast ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+        }`}
+      >
+        🚀 This feature will be live soon!
+      </div>
+
       {/* Google */}
       <button
         type="button"
+        onClick={showToast}
         className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-white/10 bg-white/3 hover:bg-white/6 hover:border-white/15 transition-all text-sm font-medium text-white"
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24">

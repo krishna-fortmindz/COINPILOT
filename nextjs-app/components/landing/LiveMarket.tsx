@@ -5,7 +5,9 @@ import type { TickerData } from "@/hooks/useMarketSocket";
 
 const FLUTTER_BASE =
   process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
-const DASHBOARD_URL = `${FLUTTER_BASE}/dashboard`;
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL
+  ? "/app/"
+  : `${FLUTTER_BASE}/dashboard`;
 
 interface CoinData {
   id: string;
@@ -157,7 +159,7 @@ export default function LiveMarket({ tickers }: { tickers: Record<string, Ticker
                         </span>
                       </div>
                       <span className={`text-[10px] font-mono font-bold ${up ? "text-[#00ff88]" : "text-[#ff3366]"}`}>
-                        {up ? "+" : ""}{coin.price_change_percentage_24h.toFixed(2)}%
+                        {up ? "+" : ""}{(coin.price_change_percentage_24h ?? 0).toFixed(2)}%
                       </span>
                     </div>
                     <div className="text-sm font-bold font-mono text-white mb-1">

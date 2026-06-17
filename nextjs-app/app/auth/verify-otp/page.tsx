@@ -62,7 +62,7 @@ function VerifyOTPContent() {
         setVerified(true);
         setTimeout(() => {
           const base = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
-          window.location.replace(`${base}/dashboard`);
+          window.location.replace(base === "http://localhost:8080" ? `${base}/dashboard` : "/app/");
         }, 1500);
       } else {
         // password_reset — go to reset-password page with credentials
@@ -134,6 +134,12 @@ function VerifyOTPContent() {
                     We sent a 6-digit code to{" "}
                     {email ? <span className="text-white/60">{email}</span> : "your email address"}
                   </p>
+                  {type === "email_verification" && (
+                    <p className="text-xs text-white/30 mt-1">
+                      Sent from{" "}
+                      <span className="text-[#00ff88] font-medium">babuvochay112@gmail.com</span>
+                    </p>
+                  )}
                 </div>
 
                 {error && (

@@ -299,7 +299,6 @@ class _SearchDialogState extends ConsumerState<_SearchDialog> {
     _SearchItem('Sentiment', 'News & social sentiment', '/sentiment', Icons.sentiment_satisfied_rounded, AppColors.brandAmber),
     _SearchItem('New Listings', 'New coin listings & AI scoring', '/listings', Icons.new_releases_rounded, AppColors.brandGreen),
     _SearchItem('Order Book', 'Bid/ask walls & depth', '/orderbook', Icons.menu_rounded, AppColors.brandBlue),
-    _SearchItem('Exchange Flows', 'On-chain inflows & outflows', '/onchain', Icons.account_tree_rounded, AppColors.brandCyan),
     _SearchItem('Token Unlocks', 'Vesting schedule & risk', '/token-unlocks', Icons.lock_open_rounded, AppColors.brandAmber),
     _SearchItem('Portfolio', 'Holdings & P&L tracker', '/portfolio', Icons.pie_chart_rounded, AppColors.brandPurple),
     _SearchItem('Risk Manager', 'Position sizing & risk tools', '/risk', Icons.shield_rounded, AppColors.brandRed),

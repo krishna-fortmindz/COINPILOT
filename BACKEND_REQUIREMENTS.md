@@ -737,3 +737,30 @@ Here's the full backend endpoint map per section:
   Socket.IO events needed (currently subscribed but not handled):
   market:kline   → live candle updates for Charts
   market:trade   → live trade feed for Order Book
+ ---
+  Flutter
+
+  ┌─────────────────────────────────────────────┬────────────────────┐
+  │                   Command                   │    Environment     │
+  ├─────────────────────────────────────────────┼────────────────────┤
+  │ flutter run -d chrome --dart-define=ENV=dev │ Local backend      │
+  ├─────────────────────────────────────────────┼────────────────────┤
+  │ flutter run -d chrome                       │ Production backend │
+  ├─────────────────────────────────────────────┼────────────────────┤
+  │ flutter build web --dart-define=ENV=dev     │ Build with local   │
+  ├─────────────────────────────────────────────┼────────────────────┤
+  │ flutter build web                           │ Build with prod    │
+  └─────────────────────────────────────────────┴────────────────────┘
+
+  ---
+  Next.js
+
+  ┌───────────────────┬────────────────────────────────────────┐
+  │      Command      │              Environment               │
+  ├───────────────────┼────────────────────────────────────────┤
+  │ npm run dev       │ Auto uses .env.development (localhost) │
+  ├───────────────────┼────────────────────────────────────────┤
+  │ npm run build     │ Auto uses .env.production (live URLs)  │
+  ├───────────────────┼────────────────────────────────────────┤
+  │ npx vercel --prod │ Uses .env.production                   │
+  └───────────────────┴────────────────────────────────────────┘

@@ -48,7 +48,6 @@ class AppSidebar extends StatelessWidget {
                     badge: 'HOT'),
                   const SizedBox(height: 16),
                   const _SectionLabel('ON-CHAIN'),
-                  _SidebarItem('/onchain', Icons.account_tree_rounded, 'Exchange Flows', currentRoute),
                   _SidebarItem('/token-unlocks', Icons.lock_open_rounded, 'Token Unlocks', currentRoute),
                   const SizedBox(height: 16),
                   const _SectionLabel('TRADING'),

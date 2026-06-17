@@ -113,7 +113,7 @@ class FundingRatePanel extends ConsumerWidget {
         minChildSize: 0.4,
         expand: false,
         builder: (innerCtx, scrollController) => _AllRatesContent(
-          rates: sorted,
+          fallbackRates: sorted,
           scrollController: scrollController,
           onRowTap: (symbol) => _showRateHistory(context, symbol),
         ),
@@ -317,31 +317,35 @@ class FundingRatePanel extends ConsumerWidget {
 
 // ── All-rates sheet content ───────────────────────────────────────────────────
 
-class _AllRatesContent extends StatefulWidget {
-  final List<FundingRate> rates;
+class _AllRatesContent extends ConsumerStatefulWidget {
+  final List<FundingRate> fallbackRates;
   final ScrollController scrollController;
   final void Function(String symbol) onRowTap;
 
   const _AllRatesContent({
-    required this.rates,
+    required this.fallbackRates,
     required this.scrollController,
     required this.onRowTap,
   });
 
   @override
-  State<_AllRatesContent> createState() => _AllRatesContentState();
+  ConsumerState<_AllRatesContent> createState() => _AllRatesContentState();
 }
 
-class _AllRatesContentState extends State<_AllRatesContent> {
+class _AllRatesContentState extends ConsumerState<_AllRatesContent> {
   String _query = '';
 
   @override
   Widget build(BuildContext context) {
+    final allAsync = ref.watch(allFundingRatesProvider);
+    final isLoading = allAsync.isLoading;
+    final allRates = allAsync.valueOrNull?.isNotEmpty == true
+        ? allAsync.valueOrNull!
+        : widget.fallbackRates;
+    final sorted = [...allRates]..sort((a, b) => b.rate.abs().compareTo(a.rate.abs()));
     final filtered = _query.isEmpty
-        ? widget.rates
-        : widget.rates
-            .where((r) => r.symbol.toLowerCase().contains(_query.toLowerCase()))
-            .toList();
+        ? sorted
+        : sorted.where((r) => r.symbol.toLowerCase().contains(_query.toLowerCase())).toList();
 
     return Container(
       decoration: const BoxDecoration(
@@ -389,7 +393,9 @@ class _AllRatesContentState extends State<_AllRatesContent> {
             ),
           ),
           Expanded(
-            child: filtered.isEmpty
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.brandGreen, strokeWidth: 2))
+                : filtered.isEmpty
                 ? Center(
                     child: Text(
                       _query.isEmpty ? 'No rates available' : 'No results for "$_query"',

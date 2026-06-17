@@ -64,10 +64,17 @@ class DashboardRepoImpl implements DashboardRepo {
       FundingRate.fromJson,
       queryParams: const {'symbols': 'BTCUSDT,ETHUSDT,SOLUSDT,BNBUSDT,XRPUSDT'},
     );
-
-    // Client-side guard: keep only the top coins in case backend ignores the param
     const wanted = {'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT'};
     final filtered = rates.where((r) => wanted.contains(r.symbol)).toList();
     return filtered.isNotEmpty ? filtered : rates.take(5).toList();
+  }
+
+  Future<List<FundingRate>> fetchAllFundingRates() async {
+    final rates = await _api.fetchList(
+      EndPoints.fundingRates,
+      FundingRate.fromJson,
+      queryParams: const {'limit': '100'},
+    );
+    return rates;
   }
 }

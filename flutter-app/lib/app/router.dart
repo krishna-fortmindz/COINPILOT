@@ -15,7 +15,6 @@ import '../features/ai_chat/ai_chat_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/trade_now/trade_now_screen.dart';
 import '../features/token_unlocks/token_unlocks_screen.dart';
-import '../features/onchain/onchain_screen.dart';
 import '../features/orderbook/orderbook_screen.dart';
 import '../features/portfolio/portfolio_screen.dart';
 import '../features/predictions/predictions_leaderboard_screen.dart';
@@ -111,6 +110,7 @@ class _LoginPrompt extends StatelessWidget {
 final router = GoRouter(
   initialLocation: '/dashboard',
   routes: [
+    GoRoute(path: '/app', redirect: (_, __) => '/dashboard'),
     ShellRoute(
       builder: (context, state, child) => AppShell(child: child),
       routes: [
@@ -127,7 +127,6 @@ final router = GoRouter(
         GoRoute(path: '/sentiment', builder: (c, s) => const NewsSentimentScreen()),
         GoRoute(path: '/listings', builder: (c, s) => const NewListingsScreen()),
         GoRoute(path: '/orderbook', builder: (c, s) => const OrderbookScreen()),
-        GoRoute(path: '/onchain', builder: (c, s) => const OnchainScreen()),
         GoRoute(path: '/token-unlocks', builder: (c, s) => const TokenUnlocksScreen()),
         GoRoute(path: '/portfolio', builder: (c, s) => const _AuthGuardedPage(child: PortfolioScreen())),
         GoRoute(path: '/risk', builder: (c, s) => const RiskManagementScreen()),

@@ -5,7 +5,9 @@ import type { TickerData } from "@/hooks/useMarketSocket";
 
 const FLUTTER_BASE =
   process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL ?? "http://localhost:8080";
-const DASHBOARD_URL = `${FLUTTER_BASE}/dashboard`;
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_FLUTTER_DASHBOARD_URL
+  ? "/app/"
+  : `${FLUTTER_BASE}/dashboard`;
 
 const COINS = [
   { symbol: "BTC", ws: "BTCUSDT", coinId: "bitcoin",           color: "#f7931a", abbr: "₿"  },
@@ -103,7 +105,7 @@ export default function Hero({
     return {
       ...c,
       price: live ? fmt(live.price) : "—",
-      change: live ? `${live.changePct >= 0 ? "+" : ""}${live.changePct.toFixed(2)}%` : "",
+      change: live ? `${live.changePct >= 0 ? "+" : ""}${(live.changePct ?? 0).toFixed(2)}%` : "",
       up: live ? live.changePct >= 0 : true,
     };
   });

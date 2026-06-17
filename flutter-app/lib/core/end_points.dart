@@ -5,16 +5,19 @@ class EndPoints {
   // Backend Base URLs
   // ─────────────────────────────────────────────────────────────
 
-  // static const String baseUrl = 'http://10.24.227.45:5000';
-  // static const String baseUrl = 'https://crypto-backend-4557.onrender.com';
-  static const String baseUrl = 'http://localhost:8080';
+  static const String _env =
+      String.fromEnvironment('ENV', defaultValue: 'prod');
+
+  static const String baseUrl = _env == 'dev'
+      ? 'http://localhost:8080'
+      : 'https://crypto-backend-4557.onrender.com';
 
   static const String apiBaseUrl = '$baseUrl/api/v1';
   static const String dashboardBaseUrl = '$apiBaseUrl/dashboard';
   static const String aiBaseUrl = '$baseUrl/api/ai';
 
   // Socket.IO — connect through dev proxy to avoid browser CORS restrictions
-  static const String socketUrl = 'http://localhost:8080';
+  static const String socketUrl = baseUrl;
   static const String socketPath = '/socket.io';
 
   // ─────────────────────────────────────────────────────────────
@@ -46,7 +49,7 @@ class EndPoints {
   static const String exchangeInfo = '$dashboardBaseUrl/exchange-info';
 
   static const String fundingRates = '$dashboardBaseUrl/funding-rates';
-  static const String marketAiAnalysis = '$apiBaseUrl/analysis/market';
+  static const String marketAiAnalysis = '$apiBaseUrl/dashboard/trade-analysis';
 
   // ─────────────────────────────────────────────────────────────
   // Trade Now — AI Analysis APIs
@@ -86,10 +89,6 @@ class EndPoints {
   static String sentimentCoin(String coinId) =>
       '$baseUrl/api/sentiment/coins/$coinId';
   static const String sentimentOnChain = '$baseUrl/api/sentiment/onchain';
-  static const String onchainIndicators = '$apiBaseUrl/onchain/indicators';
-  static String onchainIndicatorsWithParams({String symbol = 'BTC'}) =>
-      '$onchainIndicators?symbol=$symbol';
-
   // ─────────────────────────────────────────────────────────────
   // Portfolio (NEW — backend to build)
   // ─────────────────────────────────────────────────────────────
@@ -329,16 +328,6 @@ class EndPoints {
       Uri.parse(memorySimilarEvents).replace(queryParameters: {'symbol': symbol, 'limit': '$limit'}).toString();
   static String memoryMarketCyclesWithParams({String symbol = 'BTC'}) =>
       Uri.parse(memoryMarketCycles).replace(queryParameters: {'symbol': symbol}).toString();
-
-  // ─────────────────────────────────────────────────────────────
-  // Exchange Flows
-  // ─────────────────────────────────────────────────────────────
-  static const String exchangeFlowsNetflow = '$apiBaseUrl/exchange-flows/netflow';
-  static const String exchangeFlowsTopExchanges = '$apiBaseUrl/exchange-flows/top-exchanges';
-  static String exchangeFlowsNetflowWithParams({String symbol = 'BTC', int days = 30}) =>
-      Uri.parse(exchangeFlowsNetflow).replace(queryParameters: {'symbol': symbol, 'days': '$days'}).toString();
-  static String exchangeFlowsTopExchangesWithParams({int limit = 10}) =>
-      Uri.parse(exchangeFlowsTopExchanges).replace(queryParameters: {'limit': '$limit'}).toString();
 
   // ─────────────────────────────────────────────────────────────
   // Risk Management
