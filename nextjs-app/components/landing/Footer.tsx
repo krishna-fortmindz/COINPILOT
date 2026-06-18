@@ -17,7 +17,7 @@ const footerLinks = {
     { label: "Blog",     href: "/blog" },
     { label: "Careers",  href: "/careers" },
     { label: "Contact",  href: "/contact" },
-    { label: "Status",   href: "https://status.coinastra.ai" },
+    { label: "Status",   href: "https://status.coinastra.site" },
   ],
   Legal: [
     { label: "Privacy Policy",    href: "/privacy" },

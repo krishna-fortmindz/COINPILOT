@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://coinastra.ai";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://coinastra.site";
 const BRAND = "Coinastra";
 const TAGLINE = "AI-Powered Crypto Trading Intelligence";
 const DESCRIPTION =
@@ -113,7 +113,7 @@ const organizationSchema = {
     "https://twitter.com/coinastra",
     "https://github.com/coinastra",
     "https://discord.gg/coinastra",
-    "https://status.coinastra.ai",
+    "https://status.coinastra.site",
   ],
   contactPoint: {
     "@type": "ContactPoint",

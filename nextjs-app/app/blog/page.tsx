@@ -4,7 +4,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import { Clock, Tag, ArrowRight } from "lucide-react";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://coinastra.ai";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://coinastra.site";
 
 export const metadata: Metadata = {
   title: "Blog — Crypto Market Analysis & Trading Intelligence",
