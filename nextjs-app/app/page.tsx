@@ -10,7 +10,7 @@ import BlogPreview from "@/components/landing/BlogPreview";
 import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://coinastra.ai";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://coinastra.site";
 
 export const metadata: Metadata = {
   title: "Coinastra — AI-Powered Crypto Trading Intelligence",
