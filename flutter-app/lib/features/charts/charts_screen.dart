@@ -253,17 +253,19 @@ class _ChartToolbar extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => ref.read(chartsProvider).toggleAiOverlayActive(),
-            child: NeonBadge(
-              label: n.aiOverlayActive ? 'AI Overlay ON' : 'AI Overlay OFF',
-              color: n.aiOverlayActive
-                  ? AppColors.brandGreen
-                  : AppColors.textMuted,
-              icon: Icons.psychology_rounded,
+          if (n.chartType != 'Line') ...[
+            GestureDetector(
+              onTap: () => ref.read(chartsProvider).toggleAiOverlayActive(),
+              child: NeonBadge(
+                label: n.aiOverlayActive ? 'AI Overlay ON' : 'AI Overlay OFF',
+                color: n.aiOverlayActive
+                    ? AppColors.brandGreen
+                    : AppColors.textMuted,
+                icon: Icons.psychology_rounded,
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
           _ToolBtn(
             icon: n.isFullscreen
                 ? Icons.fullscreen_exit_rounded
@@ -341,7 +343,7 @@ class _SelectedChart extends ConsumerWidget {
       );
     }
 
-    if (n.candles.isEmpty) {
+    if (n.candles.length <= 1) {
       return const Center(
         child: Text(
           'No candle data available.',
@@ -366,37 +368,94 @@ class _SelectedChart extends ConsumerWidget {
             left: 16,
             top: 16,
             child: Container(
+              constraints: const BoxConstraints(maxWidth: 220),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.bgCard.withAlpha(225),
+                color: AppColors.bgCard.withAlpha(230),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppColors.brandGreen.withAlpha(40)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('AI Pattern Detected',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.brandGreen,
-                        letterSpacing: 0.5,
-                      )),
-                  const SizedBox(height: 4),
-                  Text('${n.selectedCoin} Bull Flag forming · 78% probability',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.white,
-                      )),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Target: \$${(n.candles.first.close * 1.045).toStringAsFixed(2)} · Stop: \$${(n.candles.first.close * 0.975).toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        fontSize: 10, color: AppColors.textMuted),
-                  ),
-                ],
-              ),
+              child: n.patternLoading
+                  ? const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 10, height: 10,
+                          child: CircularProgressIndicator(
+                            color: AppColors.brandGreen, strokeWidth: 1.5,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Analyzing pattern…',
+                          style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                      ],
+                    )
+                  : n.patternError != null
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded,
+                              size: 12, color: AppColors.brandRed),
+                            const SizedBox(width: 6),
+                            Text(n.patternError!,
+                              style: const TextStyle(
+                                fontSize: 10, color: AppColors.brandRed)),
+                          ],
+                        )
+                      : n.patternResult != null
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('AI Pattern Detected',
+                                      style: TextStyle(
+                                        fontSize: 10, fontWeight: FontWeight.w700,
+                                        color: AppColors.brandGreen, letterSpacing: 0.5,
+                                      )),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.brandGreen.withAlpha(20),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text('${n.patternResult!.probability}%',
+                                        style: const TextStyle(
+                                          fontSize: 9, fontWeight: FontWeight.w700,
+                                          color: AppColors.brandGreen,
+                                        )),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${n.selectedCoin} · ${n.patternResult!.pattern}',
+                                  style: const TextStyle(fontSize: 11, color: Colors.white),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Target: \$${n.patternResult!.target.toStringAsFixed(2)} · Stop: \$${n.patternResult!.stopLoss.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                                ),
+                                if (n.patternResult!.volumeConfirmation) ...[
+                                  const SizedBox(height: 2),
+                                  const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle_rounded,
+                                        size: 10, color: AppColors.brandGreen),
+                                      SizedBox(width: 3),
+                                      Text('Volume confirmed',
+                                        style: TextStyle(fontSize: 9, color: AppColors.brandGreen)),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            )
+                          : const SizedBox.shrink(),
             ),
           ),
 

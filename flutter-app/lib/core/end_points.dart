@@ -68,9 +68,10 @@ class EndPoints {
   // Order Book
   static const String analysisLevels = '$apiBaseUrl/analysis/levels';
 
-  // Charts — indicators & pattern overlay (NEW — backend to build)
+  // Charts — indicators & pattern overlay
   static const String analysisIndicators = '$apiBaseUrl/analysis/indicators';
   static const String analysisPatterns = '$apiBaseUrl/analysis/patterns';
+  static const String detectPattern = '$apiBaseUrl/charts/detect-pattern';
 
   // ─────────────────────────────────────────────────────────────
   // New Listings (NEW — backend to build)

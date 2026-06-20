@@ -6,6 +6,42 @@ import '../core/remote/api_client.dart';
 import '../core/remote/web_socket_baseclass.dart';
 import '../core/end_points.dart';
 
+class PatternResult {
+  final String pattern;
+  final String patternType;
+  final int probability;
+  final double target;
+  final double stopLoss;
+  final double riskRewardRatio;
+  final String description;
+  final String confidence;
+  final bool volumeConfirmation;
+
+  const PatternResult({
+    required this.pattern,
+    required this.patternType,
+    required this.probability,
+    required this.target,
+    required this.stopLoss,
+    required this.riskRewardRatio,
+    required this.description,
+    required this.confidence,
+    required this.volumeConfirmation,
+  });
+
+  factory PatternResult.fromJson(Map<String, dynamic> json) => PatternResult(
+    pattern: json['pattern']?.toString() ?? '—',
+    patternType: json['patternType']?.toString() ?? '—',
+    probability: (json['probability'] as num?)?.toInt() ?? 0,
+    target: (json['target'] as num?)?.toDouble() ?? 0,
+    stopLoss: (json['stopLoss'] as num?)?.toDouble() ?? 0,
+    riskRewardRatio: (json['riskRewardRatio'] as num?)?.toDouble() ?? 0,
+    description: json['description']?.toString() ?? '',
+    confidence: json['confidence']?.toString() ?? 'medium',
+    volumeConfirmation: json['volumeConfirmation'] as bool? ?? false,
+  );
+}
+
 class ChartsNotifier extends ChangeNotifier {
   String _selectedCoin = 'BTC';
   String _timeframe = '4H';
@@ -15,7 +51,7 @@ class ChartsNotifier extends ChangeNotifier {
   bool _drawActive = false;
   bool _trendActive = false;
   bool _fibActive = false;
-  bool _aiOverlayActive = true;
+  bool _aiOverlayActive = false;
   bool _isFullscreen = false;
 
   List<Candle> _candles = [];
@@ -24,6 +60,13 @@ class ChartsNotifier extends ChangeNotifier {
   StreamSubscription<KlineUpdate>? _klineSubscription;
   StreamSubscription<List<TickerUpdate>>? _tickerSubscription;
   bool _tickToggle = false;
+
+  PatternResult? _patternResult;
+  bool _patternLoading = false;
+  String? _patternError;
+
+  static const _timeframeOrder = ['1m', '5m', '15m', '1H', '4H', '1D', '1W'];
+  static const _minAiTfIndex = 4; // minimum: 4H
 
   ChartsNotifier() {
     _initSocketListener();
@@ -46,6 +89,10 @@ class ChartsNotifier extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get tickToggle => _tickToggle;
+
+  PatternResult? get patternResult => _patternResult;
+  bool get patternLoading => _patternLoading;
+  String? get patternError => _patternError;
 
   // Actions
   void setCoin(String coin) {
@@ -73,6 +120,11 @@ class ChartsNotifier extends ChangeNotifier {
   void setChartType(String t) {
     if (_chartType == t) return;
     _chartType = t;
+    if (t == 'Line' && _aiOverlayActive) {
+      _aiOverlayActive = false;
+      _patternResult = null;
+      _patternError = null;
+    }
     notifyListeners();
   }
 
@@ -105,7 +157,61 @@ class ChartsNotifier extends ChangeNotifier {
 
   void toggleAiOverlayActive() {
     _aiOverlayActive = !_aiOverlayActive;
+    if (_aiOverlayActive) {
+      final idx = _timeframeOrder.indexOf(_timeframe);
+      if (idx < _minAiTfIndex) {
+        // Upgrade to 1H minimum — loadCandles will call _fetchPattern on completion
+        _timeframe = '1H';
+        notifyListeners();
+        loadCandles();
+      } else {
+        
+        notifyListeners();
+        _fetchPattern();
+      }
+    } else {
+      _patternResult = null;
+      _patternError = null;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _fetchPattern() async {
+    if (_candles.isEmpty) return;
+    _patternLoading = true;
+    _patternError = null;
     notifyListeners();
+    try {
+      final candleList = _candles.take(100).map((c) => {
+        'timestamp': c.date.millisecondsSinceEpoch,
+        'open': c.open,
+        'high': c.high,
+        'low': c.low,
+        'close': c.close,
+        'volume': c.volume,
+      }).toList();
+
+      final response = await ApiClient.instance.post(
+        EndPoints.detectPattern,
+        data: {
+          'symbol': '${_selectedCoin}USDT',
+          'timeframe': _mapTimeframe(_timeframe),
+          'candles': candleList,
+        },
+      );
+
+      final raw = response.data;
+      if (raw is Map<String, dynamic> && raw['success'] == true) {
+        _patternResult = PatternResult.fromJson(raw['data'] as Map<String, dynamic>);
+      } else {
+        _patternError = 'Analysis unavailable';
+      }
+    } catch (_) {
+      _patternError = 'Analysis failed';
+    } finally {
+      _patternLoading = false;
+      notifyListeners();
+    }
   }
 
   void toggleFullscreen() {
@@ -154,6 +260,7 @@ class ChartsNotifier extends ChangeNotifier {
           );
         }).toList().reversed.toList();
         debugPrint('ChartsNotifier: Successfully parsed ${_candles.length} candles for $_selectedCoin');
+        if (_aiOverlayActive) _fetchPattern();
       } else {
         _errorMessage = 'Invalid data response from backend';
         debugPrint('ChartsNotifier: Error response from backend: $raw');
